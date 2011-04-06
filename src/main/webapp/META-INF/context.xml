@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Default Tomcat context.xml file for the SSO server.
+  
+  Specifies the environment properties for the application. These can 
+  be overridden after deployment to a Tomcat container by updating the 
+  context copied to $CATALINA_HOME/conf/[enginename]/[hostname]/ROOT.xml
+  
+  Note: If a ROOT.xml file already exists in the Tomcat conf path above,
+  Tomcat will not overwrite it with this file.
+-->
+<Context> 
+
+</Context>

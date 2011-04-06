@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	version="2.5">
+	<display-name>Janrain Backplane Server</display-name>
+
+	<filter>
+		<description>Logs processing time for each request</description>
+		<filter-name>timer</filter-name>
+		<filter-class>com.janrain.servlet.ProcessTimeLoggingFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>timer</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	
+	<!-- Enable logger for debugging / development ONLY!!!! 
+	<filter>
+		<description>FOR DEBUGGING ONLY: Writes the contents of each response to the log</description>
+		<filter-name>logger</filter-name>
+		<filter-class>com.janrain.sso.servlet.debug.DebugResponseLoggingFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>logger</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	-->
+
+    <!--todo extract com.janrain.[simpledb|message|servlet] as modules/libraries -->
+
+	<filter>
+		<description>Adds HTTP headers to send back with static content</description>
+		<filter-name>ResponseHeaderFilter</filter-name>
+		<filter-class>com.janrain.servlet.ResponseHeaderFilter</filter-class>
+		<init-param>
+			<!-- Allow browsers to cache content for 1 hour -->
+			<param-name>Cache-Control</param-name>
+			<param-value>public,max-age=3600</param-value>
+		</init-param>
+		<init-param>
+			<!-- Allow IE to not suck -->
+			<param-name>P3P</param-name>
+			<param-value>CP=\"IDC DSP COR ADM DEVi TAIi PSA PSD IVAi IVDi CONi HIS OUR IND CNT\"</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>ResponseHeaderFilter</filter-name>
+		<url-pattern>/static/*</url-pattern>
+	</filter-mapping>
+	
+	<servlet>
+		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>
+				classpath:spring/app-config.xml
+			</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
+		<url-pattern>/app/*</url-pattern>
+	</servlet-mapping>
+	<error-page>
+        <error-code>500</error-code>
+        <location>/WEB-INF/views/error.jsp</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/WEB-INF/views/file_not_found.jsp</location>
+    </error-page>  
+</web-app>
