@@ -2,7 +2,6 @@ package com.janrain.backplane.server.config;
 
 import com.janrain.backplane.server.ApplicationException;
 import com.janrain.backplane.server.provision.UserEntry;
-import com.janrain.backplane.server.provision.PermEntry;
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.AbstractNamedMap;
 import com.janrain.message.NamedMap;
@@ -12,22 +11,21 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.context.annotation.Scope;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.janrain.backplane.server.MessageFrame.Field.CHANNEL_ID;
-import static com.janrain.backplane.server.MessageFrame.Field.MESSAGE_ID;
-import static com.janrain.backplane.server.config.BusConfig.Field.BUS_ID;
+import static com.janrain.backplane.server.BackplaneMessage.Field.CHANNEL_NAME;
+import static com.janrain.backplane.server.BackplaneMessage.Field.ID;
+import static com.janrain.backplane.server.config.BusConfig.Field.BUS_NAME;
 import static com.janrain.backplane.server.config.BusConfig.Field.RETENTION_TIME_SECONDS;
-import static com.janrain.backplane.server.provision.PermEntry.Field.*;
 
 
 /**
- * Holds configuration settings for the SSO server
+ * Holds configuration settings for the Backplane server
  * 
  * @author Jason Cowley, Johnny Bufu
  */
@@ -36,23 +34,20 @@ public class BackplaneConfig {
 
     // - PUBLIC
 
-    public enum BUS_PERMISSION {
-        GETALL, POST, IDENTITY
-    }
+    public enum BUS_PERMISSION { GETALL, POST, GETPAYLOAD, IDENTITY }
 
     public void checkAdminAuth(String user, String password) throws AuthException {
         checkAuth(getAdminAuthTableName(), user, password);
     }
 
-    public void checkBackplaneAuth(String bus, BUS_PERMISSION perm, String user, String password) throws AuthException {
-        checkAuth(getTableNameForType(UserEntry.class), user, password);
-        checkPerm(bus, user, perm);
-   }
-
     public <T extends NamedMap> String getTableNameForType(Class<T> type) {
         return bpInstanceId + "_" + type.getSimpleName();
     }
 
+    public String getMessagesTableName() {
+        return bpInstanceId + BP_MESSAGES_TABLE_SUFFIX;
+    }
+    
     /**
      * Retrieve a configuration entity by its name
      *
@@ -114,7 +109,7 @@ public class BackplaneConfig {
     private static final String BP_MESSAGES_TABLE_SUFFIX = "_messages";
 
     private final String bpInstanceId;
-    private final ScheduledExecutorService cleanup;
+    private ScheduledExecutorService cleanup;
 
 
     private static enum BpServerProperty {
@@ -127,7 +122,6 @@ public class BackplaneConfig {
     private BackplaneConfig() {
         this.bpInstanceId = getAwsProp(BP_AWS_INSTANCE_ID);
         logger.info("Configured Backplane Server instance: " + bpInstanceId);
-        this.cleanup = createCleanupTask();
     }
 
     private ScheduledExecutorService createCleanupTask() {
@@ -149,6 +143,11 @@ public class BackplaneConfig {
         return cleanupTask;
     }
 
+    @PostConstruct
+    private void init() {
+        this.cleanup = createCleanupTask();
+    }
+
     @PreDestroy
     private void cleanup() {
         this.cleanup.shutdownNow();
@@ -160,9 +159,9 @@ public class BackplaneConfig {
             String messagesTable = getMessagesTableName();
             for(BusConfig busConfig : simpleDb.retrieve(getTableNameForType(BusConfig.class), BusConfig.class)) {
                 try {
-                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_ID), busConfig.get(RETENTION_TIME_SECONDS)));
+                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), busConfig.get(RETENTION_TIME_SECONDS)));
                 } catch (SimpleDBException sdbe) {
-                    logger.error("Error cleaning up expired messages on bus "  + busConfig.get(BUS_ID) + ", " + sdbe.getMessage(), sdbe);
+                    logger.error("Error cleaning up expired messages on bus "  + busConfig.get(BUS_NAME) + ", " + sdbe.getMessage(), sdbe);
                 }
             }
         } catch (Exception e) {
@@ -175,8 +174,8 @@ public class BackplaneConfig {
 
     private String getExpiredMessagesClause(String busId, String retentionTimeSeconds) {
         return "where " +
-            CHANNEL_ID.getFieldName() + " like '" + busId + "%' AND " +
-            MESSAGE_ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
+            CHANNEL_NAME.getFieldName() + " like '" + busId + "%' AND " +
+            ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
     }
 
     @Inject
@@ -210,10 +209,6 @@ public class BackplaneConfig {
         return bpInstanceId + BP_ADMIN_AUTH_TABLE_SUFFIX;
     }
 
-    private String getMessagesTableName() {
-        return bpInstanceId + BP_MESSAGES_TABLE_SUFFIX;
-    }
-
     private Long getMaxCacheAge() {
         return bpServerConfigCache != null && bpServerConfigCache.left != null ?
             Long.valueOf(bpServerConfigCache.left.get(BpServerProperty.CONFIG_CACHE_AGE_SECONDS.name())) :
@@ -232,23 +227,6 @@ public class BackplaneConfig {
             throw new AuthException("User  " + user + " not authorized in " + authTable + " , " + e.getMessage(), e);
         }
     }
-
-    private void checkPerm(String bus, String user, BUS_PERMISSION perm) throws AuthException {
-        String permissionsTable = getTableNameForType(PermEntry.class);
-        try {
-            StringBuilder whereClause = new StringBuilder()
-                .append(USER.getFieldName()).append(" = '").append(user).append("' AND ")
-                .append(BUS.getFieldName()).append(" = '").append(bus).append("' AND ")
-                .append(PERM.getFieldName()).append(" = '").append(perm.name()).append("'");
-            List<?> permissions = simpleDb.retrieveWhere(permissionsTable, PermEntry.class, whereClause.toString());
-            if (permissions == null || permissions.isEmpty()) {
-                throw new AuthException("User  " + user + " not authorized for  [" + bus + ":" + perm + "]");
-            }
-        } catch (SimpleDBException e) {
-            throw new AuthException("User  " + user + " not authorized for  [" + bus + ":" + perm + "]" + " , " + e.getMessage(), e);
-        }
-    }
-
     public static class BpServerConfigMap extends AbstractNamedMap {
 
         @SuppressWarnings({"UnusedDeclaration"}) // instantiation through reflection

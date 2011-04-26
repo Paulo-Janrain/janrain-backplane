@@ -27,7 +27,7 @@
     <bean id="superSimpleDB" class="com.janrain.simpledb.SuperSimpleDBImpl" />
 
     <bean id="bpConfig" class="com.janrain.backplane.server.config.MockBackplaneConfig">
-        <constructor-arg type="java.lang.String" value="testSsoConfig"/>
+        <constructor-arg type="java.lang.String" value="testBackplaneConfig"/>
     </bean>
 
 </beans>

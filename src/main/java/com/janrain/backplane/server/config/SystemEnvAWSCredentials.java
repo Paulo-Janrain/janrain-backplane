@@ -5,7 +5,7 @@ import org.apache.log4j.Logger;
 
 /**
  * Extracts and provides Amazon Web Service credentials (key id and key secret)
- * from the AWS_SIMPLEDB_SSO_KEYID and AWS_SIMPLEDB_SSO_KEY system variables.
+ * from the AWS_ACCESS_KEY_ID and AWS_SECRET_KEY system variables.
  *
  * @author Johnny Bufu
  */

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Default Tomcat context.xml file for the SSO server.
+  Default Tomcat context.xml file.
   
   Specifies the environment properties for the application. These can 
   be overridden after deployment to a Tomcat container by updating the 

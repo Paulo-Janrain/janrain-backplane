@@ -42,13 +42,6 @@ public class ProvisioningController {
         return doList(UserEntry.class, listRequest.getEntities());
     }
 
-    @RequestMapping(value = "/access/list", method = RequestMethod.POST)
-    @ResponseBody
-    public Map<String, Map<String, String>> accessList(@RequestBody ListRequest listRequest) throws AuthException {
-        bpConfig.checkAdminAuth(listRequest.getAdmin(), listRequest.getSecret());
-        return doList(PermEntry.class, listRequest.getEntities());
-    }
-
     @RequestMapping(value = "/bus/delete", method = RequestMethod.POST)
     @ResponseBody
     public Map<String, String> busDelete(@RequestBody ListRequest deleteRequest) throws AuthException {
@@ -63,13 +56,6 @@ public class ProvisioningController {
         return doDelete(UserEntry.class, deleteRequest.getEntities());
     }
 
-    @RequestMapping(value = "/access/delete", method = RequestMethod.POST)
-    @ResponseBody
-    public Map<String, String> accessDelete(@RequestBody ListRequest deleteRequest) throws AuthException {
-        bpConfig.checkAdminAuth(deleteRequest.getAdmin(), deleteRequest.getSecret());
-        return doDelete(PermEntry.class, deleteRequest.getEntities());
-    }
-
     @RequestMapping(value = "/bus/update", method = RequestMethod.POST)
     @ResponseBody
     public Map<String, String> busUpdate(@RequestBody BusUpdateRequest updateRequest) throws AuthException {
@@ -80,12 +66,6 @@ public class ProvisioningController {
     @ResponseBody
     public Map<String, String> userUpdate(@RequestBody UserUpdateRequest updateRequest) throws AuthException {
         return doUpdate(UserEntry.class, updateRequest);
-    }
-
-    @RequestMapping(value = "/access/update", method = RequestMethod.POST)
-    @ResponseBody
-    public Map<String, String> accessUpdate(@RequestBody AccessUpdateRequest updateRequest) throws AuthException {
-        return doUpdate(PermEntry.class, updateRequest);
     }
 
     /**
@@ -189,9 +169,9 @@ public class ProvisioningController {
         }
     }
 
-    private <T extends AbstractMessage> Map<String, String> updateConfigs(Class<T> customerConfigType, List<T> ssoConfigs) {
+    private <T extends AbstractMessage> Map<String, String> updateConfigs(Class<T> customerConfigType, List<T> bpConfigs) {
         Map<String,String> result = new LinkedHashMap<String, String>();
-        for(T config : ssoConfigs) {
+        for(T config : bpConfigs) {
             String updateStatus = BACKPLANE_UPDATE_SUCCESS;
             try {
                 simpleDb.store(bpConfig.getTableNameForType(customerConfigType), customerConfigType, config);
@@ -206,5 +186,4 @@ public class ProvisioningController {
     // type helper classes for JSON mapper
     private static class BusUpdateRequest extends UpdateRequest<BusConfig> {}
     private static class UserUpdateRequest extends UpdateRequest<UserEntry> {}
-    private static class AccessUpdateRequest extends UpdateRequest<PermEntry> {}
 }
