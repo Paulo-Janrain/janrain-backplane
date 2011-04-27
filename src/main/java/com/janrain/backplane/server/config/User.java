@@ -1,4 +1,4 @@
-package com.janrain.backplane.server.provision;
+package com.janrain.backplane.server.config;
 
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.MessageField;
@@ -9,7 +9,7 @@ import java.util.Set;
 /**
  * @author Johnny Bufu
  */
-public class UserEntry extends AbstractMessage {
+public class User extends AbstractMessage {
 
     // - PUBLIC
 

@@ -3,7 +3,7 @@ package com.janrain.backplane.server;
 import com.janrain.backplane.server.config.AuthException;
 import com.janrain.backplane.server.config.BackplaneConfig;
 import com.janrain.backplane.server.config.BusConfig;
-import com.janrain.backplane.server.provision.UserEntry;
+import com.janrain.backplane.server.config.User;
 import com.janrain.simpledb.SimpleDBException;
 import com.janrain.simpledb.SuperSimpleDB;
 import org.apache.commons.codec.binary.Base64;
@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -29,8 +30,8 @@ public class BackplaneController {
 
     // - PUBLIC
 
-    @RequestMapping(value = "/{bus}/new_channel", method = RequestMethod.GET)
-    public String newChannel() {
+    @RequestMapping(value = "/new_channel", method = RequestMethod.GET)
+    public @ResponseBody String newChannel() {
         return randomString(CHANNEL_NAME_LENGTH);
     }
 
@@ -94,9 +95,24 @@ public class BackplaneController {
         return "";
     }
 
+    /**
+     * Handle auth errors
+     */
+    @ExceptionHandler
+    @ResponseBody
+    public Map<String, String> handle(final AuthException e, HttpServletResponse response) {
+        logger.error("Backplane authentication error: " + e.getMessage());
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        return new HashMap<String,String>() {{
+            put(ERR_MSG_FIELD, e.getMessage());
+        }};
+    }
+
     // - PRIVATE
 
     private static final Logger logger = Logger.getLogger(BackplaneController.class);
+
+    private static final String ERR_MSG_FIELD = "ERR_MSG";
 
     private static final int CHANNEL_NAME_LENGTH = 32;
 
@@ -159,16 +175,16 @@ public class BackplaneController {
         String user = userPass.substring(0, delim);
         String pass = userPass.substring(delim + 1);
 
-        UserEntry userEntry = null;
+        User userEntry = null;
         try {
-            userEntry = bpConfig.getConfig(user, UserEntry.class);
+            userEntry = bpConfig.getConfig(user, User.class);
         } catch (SimpleDBException e) {
             authError("Error looking up user: " + user);
         }
 
         if (userEntry == null) {
             authError("User not found: " + user);
-        } else if (! userEntry.get(UserEntry.Field.PWDHASH).equals(getHash(pass))) {
+        } else if (! userEntry.get(User.Field.PWDHASH).equals(getHash(pass))) {
             authError("Incorrect password for user " + user);
         }
 

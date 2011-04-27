@@ -3,6 +3,7 @@ package com.janrain.backplane.server.provision;
 import com.janrain.backplane.server.config.AuthException;
 import com.janrain.backplane.server.config.BackplaneConfig;
 import com.janrain.backplane.server.config.BusConfig;
+import com.janrain.backplane.server.config.User;
 import com.janrain.message.AbstractMessage;
 import com.janrain.simpledb.SuperSimpleDB;
 import org.apache.log4j.Logger;
@@ -39,7 +40,7 @@ public class ProvisioningController {
     @ResponseBody
     public Map<String, Map<String, String>> userList(@RequestBody ListRequest listRequest) throws AuthException {
         bpConfig.checkAdminAuth(listRequest.getAdmin(), listRequest.getSecret());
-        return doList(UserEntry.class, listRequest.getEntities());
+        return doList(User.class, listRequest.getEntities());
     }
 
     @RequestMapping(value = "/bus/delete", method = RequestMethod.POST)
@@ -53,7 +54,7 @@ public class ProvisioningController {
     @ResponseBody
     public Map<String, String> userDelete(@RequestBody ListRequest deleteRequest) throws AuthException {
         bpConfig.checkAdminAuth(deleteRequest.getAdmin(), deleteRequest.getSecret());
-        return doDelete(UserEntry.class, deleteRequest.getEntities());
+        return doDelete(User.class, deleteRequest.getEntities());
     }
 
     @RequestMapping(value = "/bus/update", method = RequestMethod.POST)
@@ -65,7 +66,7 @@ public class ProvisioningController {
     @RequestMapping(value = "/user/update", method = RequestMethod.POST)
     @ResponseBody
     public Map<String, String> userUpdate(@RequestBody UserUpdateRequest updateRequest) throws AuthException {
-        return doUpdate(UserEntry.class, updateRequest);
+        return doUpdate(User.class, updateRequest);
     }
 
     /**
@@ -185,5 +186,5 @@ public class ProvisioningController {
 
     // type helper classes for JSON mapper
     private static class BusUpdateRequest extends UpdateRequest<BusConfig> {}
-    private static class UserUpdateRequest extends UpdateRequest<UserEntry> {}
+    private static class UserUpdateRequest extends UpdateRequest<User> {}
 }

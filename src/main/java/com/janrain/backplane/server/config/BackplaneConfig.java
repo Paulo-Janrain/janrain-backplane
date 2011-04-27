@@ -1,7 +1,6 @@
 package com.janrain.backplane.server.config;
 
 import com.janrain.backplane.server.ApplicationException;
-import com.janrain.backplane.server.provision.UserEntry;
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.AbstractNamedMap;
 import com.janrain.message.NamedMap;
@@ -104,7 +103,7 @@ public class BackplaneConfig {
 
     private static final String BP_AWS_INSTANCE_ID = "PARAM1";
     private static final String BP_SERVER_CONFIG_TABLE_SUFFIX = "_bpserverconfig";
-    private static final String BP_ADMIN_AUTH_TABLE_SUFFIX = "_admin";
+    private static final String BP_ADMIN_AUTH_TABLE_SUFFIX = "_Admin";
     private static final String BP_CONFIG_ENTRY_NAME = "bpserverconfig";
     private static final String BP_MESSAGES_TABLE_SUFFIX = "_messages";
 
@@ -217,8 +216,8 @@ public class BackplaneConfig {
 
     private void checkAuth(String authTable, String user, String password) throws AuthException {
         try {
-            UserEntry userEntry = simpleDb.retrieve(authTable, UserEntry.class, user);
-            String authKey = userEntry == null ? null : userEntry.get(UserEntry.Field.PWDHASH);
+            User userEntry = simpleDb.retrieve(authTable, User.class, user);
+            String authKey = userEntry == null ? null : userEntry.get(User.Field.PWDHASH);
             // todo: hash secret
             if (authKey == null || ! authKey.equals(password)) {
                 throw new AuthException("User  " + user + " not authorized in " + authTable);

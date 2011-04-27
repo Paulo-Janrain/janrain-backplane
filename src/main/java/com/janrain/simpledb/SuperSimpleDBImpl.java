@@ -105,7 +105,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
                 resultItem.init(item.getName(), asMap(item.getAttributes()));
                 result.add(resultItem);
             }
-            logger.info("SimpleDB retrieved from " + table + " for query `" + whereClause + "` " + result.size() + " entries");
+            logger.info("SimpleDB retrieved from " + table + (whereClause != null ? " for query `" + whereClause + "` ": " ")  + result.size() + " entries");
             return result;
         } catch (InstantiationException e) {
             throw new SimpleDBException(e.getMessage(), e);
