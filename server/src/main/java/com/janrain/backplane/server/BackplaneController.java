@@ -7,12 +7,15 @@ import com.janrain.backplane.server.config.User;
 import com.janrain.simpledb.SimpleDBException;
 import com.janrain.simpledb.SuperSimpleDB;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
@@ -24,71 +27,54 @@ import java.util.*;
  * @author Johnny Bufu
  */
 @Controller
-@RequestMapping(value="/v1/bus/*")
+@RequestMapping(value="/*")
 @SuppressWarnings({"UnusedDeclaration"})
 public class BackplaneController {
 
     // - PUBLIC
 
-    @RequestMapping(value = "/new_channel", method = RequestMethod.GET)
-    public @ResponseBody String newChannel() {
-        return randomString(CHANNEL_NAME_LENGTH);
-    }
-
-    @RequestMapping(value = "/{bus}", method = RequestMethod.GET)
-    public @ResponseBody List<BackplaneFrame> getBusMessages( @RequestHeader(value = "Authorization") String basicAuth,
-                                  @PathVariable String bus,
-                                  @RequestParam(value = "since", defaultValue = "") String since) throws AuthException, SimpleDBException {
+    @RequestMapping(value = "/bus/{bus}/", method = RequestMethod.GET)
+    public @ResponseBody List<HashMap<String,Object>> getBusMessages(
+                                @RequestHeader(value = "Authorization") String basicAuth,
+                                @PathVariable String bus,
+                                @RequestParam(value = "since", defaultValue = "") String since) throws AuthException, SimpleDBException, BackplaneServerException {
         checkAuth(basicAuth, bus, BackplaneConfig.BUS_PERMISSION.GETALL);
 
         StringBuilder whereClause = new StringBuilder()
-            .append(BackplaneMessage.Field.BUS.getFieldName()).append("=").append(bus);
-        if (since.length() > 0) {
-            whereClause.append(BackplaneMessage.Field.ID).append(" > ").append(since);
+            .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'");
+        if (! StringUtils.isEmpty(since)) {
+            whereClause.append(" and ").append(BackplaneMessage.Field.ID).append(" > '").append(since).append("'");
         }
 
         List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
-        List<BackplaneFrame> frames = new ArrayList<BackplaneFrame>();
+        List<HashMap<String,Object>> frames = new ArrayList<HashMap<String, Object>>();
         for (BackplaneMessage message : messages) {
-            frames.add(new BackplaneFrame(message, true));
+            frames.add(message.asFrame());
         }
         return frames;
     }
 
-    @RequestMapping(value = "/{bus}/channel/{channel}", method = RequestMethod.GET)
-    public @ResponseBody List<BackplaneFrame> getChannelMessages(@PathVariable String bus,
-                                     @PathVariable String channel,
-                                     @RequestParam(value = "since", required = false) String since,
-                                     @RequestHeader(value = "Authorization", required = false) String basicAuth) throws SimpleDBException, AuthException {
+    @RequestMapping(value = "/bus/{bus}/channel/{channel}", method = RequestMethod.GET)
+    public @ResponseBody String getChannel(
+                                @PathVariable String bus,
+                                @PathVariable String channel,
+                                @RequestParam String callback,
+                                @RequestParam(value = "since", required = false) String since) throws SimpleDBException, AuthException, BackplaneServerException {
 
-        if (basicAuth != null) {
-            checkAuth(basicAuth, bus, BackplaneConfig.BUS_PERMISSION.GETPAYLOAD);
-        }
+        return paddedResponse(callback, NEW_CHANNEL_LAST_PATH.equals(channel) ? newChannel() : getChannelMessages(bus, channel, since));
 
-        StringBuilder whereClause = new StringBuilder()
-            .append(BackplaneMessage.Field.BUS.getFieldName()).append("=").append(bus)
-            .append(BackplaneMessage.Field.CHANNEL_NAME).append("=").append(channel);
-        if (since.length() > 0) {
-            whereClause.append(BackplaneMessage.Field.ID).append(" > ").append(since);
-        }
-
-        List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
-        List<BackplaneFrame> frames = new ArrayList<BackplaneFrame>();
-        for (BackplaneMessage message : messages) {
-            frames.add(new BackplaneFrame(message, basicAuth != null));
-        }
-        return frames;
     }
 
-    @RequestMapping(value = "/{bus}/channel/{channel}", method = RequestMethod.POST)
-    public String postToChannel( @RequestHeader(value = "Authorization") String basicAuth, @RequestBody List<BackplaneMessage> messages,
-                                 @PathVariable String bus, @PathVariable String channel) throws AuthException, SimpleDBException {
+    @RequestMapping(value = "/bus/{bus}/channel/{channel}", method = RequestMethod.POST)
+    public @ResponseBody String postToChannel(
+                                @RequestHeader(value = "Authorization") String basicAuth,
+                                @RequestBody List<Map<String,String>> messages,
+                                @PathVariable String bus,
+                                @PathVariable String channel) throws AuthException, SimpleDBException, BackplaneServerException {
         checkAuth(basicAuth, bus, BackplaneConfig.BUS_PERMISSION.POST);
 
-        for(BackplaneMessage message : messages) {
-            message.setId(generateMessageId());
-            message.setBus(bus);
-            message.setChannelName(channel);
+        for(Map<String,String> messageData : messages) {
+            BackplaneMessage message = new BackplaneMessage(generateMessageId(), bus, channel, messageData);
             simpleDb.store(bpConfig.getMessagesTableName(), BackplaneMessage.class, message);
         }
 
@@ -101,19 +87,32 @@ public class BackplaneController {
     @ExceptionHandler
     @ResponseBody
     public Map<String, String> handle(final AuthException e, HttpServletResponse response) {
-        logger.error("Backplane authentication error: " + e.getMessage());
+        logger.error("Backplane authentication error: " + bpConfig.getDebugException(e));
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return new HashMap<String,String>() {{
             put(ERR_MSG_FIELD, e.getMessage());
         }};
     }
 
+    /**
+     * Handle all other errors
+     */
+    @ExceptionHandler
+    @ResponseBody
+    public Map<String, String> handle(final Exception e, HttpServletResponse response) {
+        logger.error("Error handling backplane request", bpConfig.getDebugException(e));
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        return new HashMap<String,String>() {{
+            put(ERR_MSG_FIELD, e.getMessage());
+        }};
+    }
+    
     // - PRIVATE
 
     private static final Logger logger = Logger.getLogger(BackplaneController.class);
 
+    private static final String NEW_CHANNEL_LAST_PATH = "new";
     private static final String ERR_MSG_FIELD = "ERR_MSG";
-
     private static final int CHANNEL_NAME_LENGTH = 32;
 
     @Inject
@@ -214,6 +213,43 @@ public class BackplaneController {
             throw new AuthException("Access denied. " + (bpConfig.isDebugMode() ? errMsg : ""));
         } catch (Exception e) {
             throw new AuthException("Access denied.");
+        }
+    }
+
+    private String paddedResponse(String callback, String s) {
+        StringBuilder result = new StringBuilder(callback);
+        result.append("(\"").append(s).append("\")");
+        return result.toString();
+    }
+
+    private String newChannel() {
+        return randomString(CHANNEL_NAME_LENGTH);
+    }
+
+    private String getChannelMessages(String bus, String channel, String since) throws SimpleDBException, BackplaneServerException {
+
+        StringBuilder whereClause = new StringBuilder()
+            .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'")
+            .append(" and ").append(BackplaneMessage.Field.CHANNEL_NAME.getFieldName()).append("='").append(channel).append("'");
+        if (! StringUtils.isEmpty(since)) {
+            whereClause.append(" and ").append(BackplaneMessage.Field.ID).append(" > '").append(since).append("'");
+        }
+
+        List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
+
+        List<Map<String,Object>> frames = new ArrayList<Map<String, Object>>();
+
+        for (BackplaneMessage message : messages) {
+            frames.add(message.asFrame());
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(frames);
+        } catch (IOException e) {
+            String errMsg = "Error converting frames to JSON: " + e.getMessage();
+            logger.error(errMsg, bpConfig.getDebugException(e));
+            throw new BackplaneServerException(errMsg, e);
         }
     }
 }

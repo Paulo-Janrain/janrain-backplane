@@ -57,7 +57,7 @@ public class BackplaneConfig {
     public <T extends AbstractMessage> T getConfig(String entityName, Class<T> entityType) throws SimpleDBException {
         T config = simpleDb.retrieve(getTableNameForType(entityType), entityType, entityName);
         if (config == null) {
-            throw new ApplicationException("Error looking up " + entityType.getSimpleName() + " configuration for " + entityName);
+            throw new ApplicationException("Error looking up " + entityType.getSimpleName() + " " + entityName);
         }
         return config;
     }
@@ -172,9 +172,8 @@ public class BackplaneConfig {
     }
 
     private String getExpiredMessagesClause(String busId, String retentionTimeSeconds) {
-        return "where " +
-            CHANNEL_NAME.getFieldName() + " like '" + busId + "%' AND " +
-            ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
+        return CHANNEL_NAME.getFieldName() + " like '" + busId + "%' AND " +
+               ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
     }
 
     @Inject

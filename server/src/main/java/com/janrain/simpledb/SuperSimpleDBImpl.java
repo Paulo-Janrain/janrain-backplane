@@ -268,7 +268,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     private List<Item> doSelectWhere(String table, String whereClause) throws SimpleDBException {
         try {
             List<Item> result = new ArrayList<Item>();
-            String query = "select * from `" + table + "`" + (StringUtils.isBlank(whereClause) ? "" : " " + whereClause);
+            String query = "select * from `" + table + "`" + (StringUtils.isBlank(whereClause) ? "" : " where " + whereClause);
             SelectRequest selectRequest = new SelectRequest(query, true);
             SelectResult selectResult;
             String nextToken;
