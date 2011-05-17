@@ -1,0 +1,13 @@
+adddomain bpstg_bpserverconfig
+setdomain bpstg_bpserverconfig
+addattr bpserverconfig DEBUG_MODE true
+addattr bpserverconfig CONFIG_CACHE_AGE_SECONDS 10
+addattr bpserverconfig CLEANUP_INTERVAL_MINUTES 2
+
+adddomain bpstg_Admin
+setdomain bpstg_Admin
+addattr <bpadmin_user> <bpadmin_user> <bpadmin_pwdhash>
+
+adddomain bpstg_User
+adddomain bpstg_BusConfig
+adddomain bpstg_messages

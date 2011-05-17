@@ -1,6 +1,7 @@
 package com.janrain.backplane.server.config;
 
 import com.janrain.backplane.server.ApplicationException;
+import com.janrain.crypto.HmacHashUtils;
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.AbstractNamedMap;
 import com.janrain.message.NamedMap;
@@ -165,9 +166,9 @@ public class BackplaneConfig {
             }
         } catch (Exception e) {
             // catch-all, else cleanup thread stops
-            logger.error("Callback cleanup task error: " + e.getMessage(), e);
+            logger.error("Backplane messages cleanup task error: " + e.getMessage(), e);
         } finally {
-            logger.info("Callback cleanup task finished.");
+            logger.info("Backplane messages cleanup task finished.");
         }
     }
 
@@ -217,8 +218,7 @@ public class BackplaneConfig {
         try {
             User userEntry = simpleDb.retrieve(authTable, User.class, user);
             String authKey = userEntry == null ? null : userEntry.get(User.Field.PWDHASH);
-            // todo: hash secret
-            if (authKey == null || ! authKey.equals(password)) {
+            if ( ! HmacHashUtils.checkHmacHash(password, authKey) ) {
                 throw new AuthException("User  " + user + " not authorized in " + authTable);
             }
         } catch (SimpleDBException e) {

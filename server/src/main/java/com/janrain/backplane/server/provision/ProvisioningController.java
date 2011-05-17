@@ -4,6 +4,7 @@ import com.janrain.backplane.server.config.AuthException;
 import com.janrain.backplane.server.config.BackplaneConfig;
 import com.janrain.backplane.server.config.BusConfig;
 import com.janrain.backplane.server.config.User;
+import com.janrain.crypto.HmacHashUtils;
 import com.janrain.message.AbstractMessage;
 import com.janrain.simpledb.SuperSimpleDB;
 import org.apache.log4j.Logger;
@@ -66,6 +67,7 @@ public class ProvisioningController {
     @RequestMapping(value = "/user/update", method = RequestMethod.POST)
     @ResponseBody
     public Map<String, String> userUpdate(@RequestBody UserUpdateRequest updateRequest) throws AuthException {
+        updateRequest.setSecret(HmacHashUtils.hmacHash(updateRequest.getSecret()));
         return doUpdate(User.class, updateRequest);
     }
 

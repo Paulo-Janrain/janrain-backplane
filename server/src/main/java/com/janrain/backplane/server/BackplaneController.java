@@ -4,6 +4,7 @@ import com.janrain.backplane.server.config.AuthException;
 import com.janrain.backplane.server.config.BackplaneConfig;
 import com.janrain.backplane.server.config.BusConfig;
 import com.janrain.backplane.server.config.User;
+import com.janrain.crypto.HmacHashUtils;
 import com.janrain.simpledb.SimpleDBException;
 import com.janrain.simpledb.SuperSimpleDB;
 import org.apache.commons.codec.binary.Base64;
@@ -183,7 +184,7 @@ public class BackplaneController {
 
         if (userEntry == null) {
             authError("User not found: " + user);
-        } else if (! userEntry.get(User.Field.PWDHASH).equals(getHash(pass))) {
+        } else if ( ! HmacHashUtils.checkHmacHash(pass, userEntry.get(User.Field.PWDHASH)) ) {
             authError("Incorrect password for user " + user);
         }
 
@@ -200,11 +201,6 @@ public class BackplaneController {
             logger.error("User " + user + " denied " + permission + " to " + bus);
             throw new AuthException("Access denied.");
         }
-    }
-
-    private String getHash(String pass) {
-        // todo: HMAC hash
-        return pass;
     }
 
     private void authError(String errMsg) throws AuthException {
