@@ -221,7 +221,7 @@ public class BackplaneController {
 
     private String paddedResponse(String callback, String s) {
         StringBuilder result = new StringBuilder(callback);
-        result.append("(\"").append(s).append("\")");
+        result.append("(").append(s).append(")");
         return result.toString();
     }
 
