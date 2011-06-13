@@ -57,6 +57,10 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
+		<url-pattern>/v1/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
 		<url-pattern>/v1.1/*</url-pattern>
 	</servlet-mapping>
 	<error-page>
