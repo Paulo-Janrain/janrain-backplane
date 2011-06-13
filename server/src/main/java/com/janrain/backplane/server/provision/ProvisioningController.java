@@ -24,7 +24,7 @@ import java.util.Map;
  * @author Johnny Bufu
  */
 @Controller
-@RequestMapping(value="/v1/provision/*")
+@RequestMapping(value="/provision/*")
 @SuppressWarnings({"UnusedDeclaration"})
 public class ProvisioningController {
 
@@ -67,7 +67,6 @@ public class ProvisioningController {
     @RequestMapping(value = "/user/update", method = RequestMethod.POST)
     @ResponseBody
     public Map<String, String> userUpdate(@RequestBody UserUpdateRequest updateRequest) throws AuthException {
-        updateRequest.setSecret(HmacHashUtils.hmacHash(updateRequest.getSecret()));
         return doUpdate(User.class, updateRequest);
     }
 
@@ -175,6 +174,11 @@ public class ProvisioningController {
     private <T extends AbstractMessage> Map<String, String> updateConfigs(Class<T> customerConfigType, List<T> bpConfigs) {
         Map<String,String> result = new LinkedHashMap<String, String>();
         for(T config : bpConfigs) {
+            if (config instanceof User) {
+                // hash the new user password
+                User user = (User) config;
+                user.put(User.Field.PWDHASH.getFieldName(), HmacHashUtils.hmacHash(user.get(User.Field.PWDHASH)));
+            }
             String updateStatus = BACKPLANE_UPDATE_SUCCESS;
             try {
                 simpleDb.store(bpConfig.getTableNameForType(customerConfigType), customerConfigType, config);
