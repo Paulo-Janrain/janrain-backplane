@@ -107,7 +107,11 @@ public class BackplaneController {
         logger.error("Error handling backplane request", bpConfig.getDebugException(e));
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         return new HashMap<String,String>() {{
-            put(ERR_MSG_FIELD, e.getMessage());
+            try {
+                put(ERR_MSG_FIELD, bpConfig.isDebugMode() ? e.getMessage() : "Error processing request.");
+            } catch (SimpleDBException e1) {
+                put(ERR_MSG_FIELD, "Error processing request.");
+            }
         }};
     }
     
