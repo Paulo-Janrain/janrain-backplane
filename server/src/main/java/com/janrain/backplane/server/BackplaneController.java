@@ -226,7 +226,7 @@ public class BackplaneController {
     }
 
     private String newChannel() {
-        return randomString(CHANNEL_NAME_LENGTH);
+        return "\"" + randomString(CHANNEL_NAME_LENGTH) +"\"";
     }
 
     private String getChannelMessages(String bus, String channel, String since) throws SimpleDBException, BackplaneServerException {
