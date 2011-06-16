@@ -276,7 +276,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
                 selectResult = simpleDB.select(selectRequest);
                 nextToken = selectResult.getNextToken();
                 result.addAll(selectResult.getItems());
-                selectResult.setNextToken(nextToken);
+                selectRequest.setNextToken(nextToken);
             } while (nextToken != null);
             return result;
         } catch (AmazonClientException e) {
