@@ -219,10 +219,10 @@ public class BackplaneConfig {
             User userEntry = simpleDb.retrieve(authTable, User.class, user);
             String authKey = userEntry == null ? null : userEntry.get(User.Field.PWDHASH);
             if ( ! HmacHashUtils.checkHmacHash(password, authKey) ) {
-                throw new AuthException("User  " + user + " not authorized in " + authTable);
+                throw new AuthException("User " + user + " not authorized in " + authTable);
             }
         } catch (SimpleDBException e) {
-            throw new AuthException("User  " + user + " not authorized in " + authTable + " , " + e.getMessage(), e);
+            throw new AuthException("User " + user + " not authorized in " + authTable + " , " + e.getMessage(), e);
         }
     }
     public static class BpServerConfigMap extends AbstractNamedMap {

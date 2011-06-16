@@ -47,7 +47,7 @@ public class BackplaneController {
         StringBuilder whereClause = new StringBuilder()
             .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'");
         if (! StringUtils.isEmpty(since)) {
-            whereClause.append(" and ").append(BackplaneMessage.Field.ID).append(" > '").append(since).append("'");
+            whereClause.append(" and ").append(BackplaneMessage.Field.ID.getFieldName()).append(" > '").append(since).append("'");
         }
 
         List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
@@ -235,7 +235,7 @@ public class BackplaneController {
             .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'")
             .append(" and ").append(BackplaneMessage.Field.CHANNEL_NAME.getFieldName()).append("='").append(channel).append("'");
         if (! StringUtils.isEmpty(since)) {
-            whereClause.append(" and ").append(BackplaneMessage.Field.ID).append(" > '").append(since).append("'");
+            whereClause.append(" and ").append(BackplaneMessage.Field.ID.getFieldName()).append(" > '").append(since).append("'");
         }
 
         List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
