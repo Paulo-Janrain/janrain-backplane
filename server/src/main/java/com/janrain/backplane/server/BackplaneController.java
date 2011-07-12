@@ -163,9 +163,9 @@ public class BackplaneController {
         random.nextBytes(randomBytes);
         for (int i = 0; i < length; i++) {
             byte b = randomBytes[i];
-            int c = Math.abs(b % 36);
-            if (c < 26) c += 97; // map (0..25) to 'a' .. 'z'
-            else c += (48 - 26);   // map (26..35) to '0'..'9'
+            int c = Math.abs(b % 16);
+            if (c < 10) c += 48; // map (0..9) to '0' .. '9'
+            else c += (97 - 10);   // map (10..15) to 'a'..'f'
             randomBytes[i] = (byte) c;
         }
         try {
