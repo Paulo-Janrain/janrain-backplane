@@ -1,19 +1,3 @@
-/*
- * Copyright 2011 Janrain, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.janrain.simpledb;
 
 import com.amazonaws.AmazonClientException;
@@ -62,6 +46,27 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
             logger.info("SimpleDB stored " + table + "/" + data.getName());
         } catch (AmazonClientException e) {
             throw new SimpleDBException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public <T extends NamedMap> void update(String table, Class<T> type, T expected, T updated) throws SimpleDBException {
+        String accessLockToken = null;
+        boolean success = false;
+        String key = expected.getName();
+        try {
+            accessLockToken = accessLock(table, key);
+            T fromDB = lockedRetrieve(table, type, key, accessLockToken);
+            if (fromDB != null && fromDB.equals(expected)) {
+                doDelete(table, key, accessLockToken);
+                // todo: not good if simpledb fails in between these two
+                store(table, type, updated);
+                success = true;
+            }
+        } finally {
+            if (accessLockToken != null && ! success) {
+                accessUnlock(table, key, accessLockToken);
+            }
         }
     }
 
@@ -121,7 +126,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
                 resultItem.init(item.getName(), asMap(item.getAttributes()));
                 result.add(resultItem);
             }
-            logger.info("SimpleDB retrieved from " + table + (whereClause != null ? " for query `" + whereClause + "` ": " ")  + result.size() + " entries");
+            logger.info("SimpleDB retrieved from " + table + " for query `" + whereClause + "` " + result.size() + " entries");
             return result;
         } catch (InstantiationException e) {
             throw new SimpleDBException(e.getMessage(), e);
@@ -132,39 +137,22 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
 
     @Override
     public <T extends NamedMap> T retrieveAndDelete(String table, Class<T> type, String key) throws SimpleDBException {
+        String accessLockToken = null;
+        boolean success = false;
         try {
-            String uniqueRetrieveToken = UUID.randomUUID().toString();
-            final ReplaceableAttribute uniqueRetrieve = new ReplaceableAttribute(UNIQUE_RETRIEVE_ATTR, uniqueRetrieveToken, false);
-            final UpdateCondition nonExistCondition = new UpdateCondition().withName(UNIQUE_RETRIEVE_ATTR).withExists(false);
-            PutAttributesRequest uniqueTokenRequest = new PutAttributesRequest(
-                table,
-                key,
-                new ArrayList<ReplaceableAttribute>() {{ add(uniqueRetrieve); }},
-                nonExistCondition);
-
-            simpleDB.putAttributes(uniqueTokenRequest);
-
-            GetAttributesRequest req = new GetAttributesRequest(table, key).withConsistentRead(true);
-            List<Attribute> attributes = simpleDB.getAttributes(req).getAttributes();
-            List<Attribute> expectedAttributes = removeExpectedToken(attributes, UNIQUE_RETRIEVE_ATTR, uniqueRetrieveToken);
-            logger.debug("SimpleDB got " + expectedAttributes.size() + " expected attributes for unique retrieve token " + uniqueRetrieveToken);
-            if(expectedAttributes == null || expectedAttributes.size() <= 1) {
-                logger.warn("SimpleDB unique retrieve failed for " + table + "/" + key);
-                return null;
-            } else {
-                UpdateCondition tokenExists = new UpdateCondition().withName(UNIQUE_RETRIEVE_ATTR).withValue(uniqueRetrieveToken);
-                doDelete(table, key, tokenExists);
-                T result = type.newInstance();
-                result.init(key, asMap(expectedAttributes));
-                logger.info("SimpleDB retrieved and deleted " + table + "/" + key);
-                return result;
+            accessLockToken = accessLock(table, key);
+            T result = lockedRetrieve(table, type, key, accessLockToken);
+            if (result != null) {
+                doDelete(table, key, accessLockToken);
+                success = true;
             }
+            return result;
         } catch (AmazonClientException e) {
             throw new SimpleDBException(e.getMessage(), e);
-        } catch (InstantiationException e) {
-            throw new SimpleDBException(e.getMessage(), e);
-        } catch (IllegalAccessException e) {
-            throw new SimpleDBException(e.getMessage(), e);
+        } finally {
+            if (accessLockToken != null && ! success) {
+                accessUnlock(table, key, accessLockToken);
+            }
         }
     }
 
@@ -187,7 +175,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
 
 	private static final Logger logger = Logger.getLogger(SuperSimpleDBImpl.class);
 
-    private static final String UNIQUE_RETRIEVE_ATTR = "ssdb_unique_retrieve" ;
+    private static final String UNIQUE_LOCK_ATTR = "ssdb_unique_retrieve" ;
 
     private static final int BATCH_DELETE_LIMIT = 25;
 
@@ -200,7 +188,8 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
 	/**
 	 * Singleton access provided via Spring
 	 */
-	private SuperSimpleDBImpl() { }
+	@SuppressWarnings({"UnusedDeclaration"})
+    private SuperSimpleDBImpl() { }
 
     /**
      * Check if the domain (table) exists, and initialize it only if doesn't (since creating it is potentially expensive)
@@ -224,6 +213,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
 
         } while (nextToken != null);
 
+        logger.info("Creating table: " + table);
         simpleDB.createDomain(new CreateDomainRequest(table));
         checkedDomains.add(table);
     }
@@ -284,7 +274,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     private List<Item> doSelectWhere(String table, String whereClause) throws SimpleDBException {
         try {
             List<Item> result = new ArrayList<Item>();
-            String query = "select * from `" + table + "`" + (StringUtils.isBlank(whereClause) ? "" : " where " + whereClause);
+            String query = "select * from `" + table + "`" + (StringUtils.isBlank(whereClause) ? "" : " " + whereClause);
             SelectRequest selectRequest = new SelectRequest(query, true);
             SelectResult selectResult;
             String nextToken;
@@ -300,10 +290,10 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
         }
     }
 
-    private void doDelete(String table, String key, UpdateCondition condition) throws SimpleDBException {
+    private void doDelete(String table, String key, String accessLockToken) throws SimpleDBException {
         try {
-            DeleteAttributesRequest deleteRequest = condition != null ?
-                new DeleteAttributesRequest(table, key, null, condition) :
+            DeleteAttributesRequest deleteRequest = accessLockToken != null ?
+                new DeleteAttributesRequest(table, key, null, new UpdateCondition().withName(UNIQUE_LOCK_ATTR).withValue(accessLockToken)) :
                 new DeleteAttributesRequest(table, key);
             simpleDB.deleteAttributes(deleteRequest);
             logger.info("SimpleDB deleted " + table + "/" + key);
@@ -311,5 +301,69 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
             throw new SimpleDBException(e.getMessage(), e);
         }
 
+    }
+
+    private <T extends NamedMap> T lockedRetrieve(String table, Class<T> type, String key, String accessLockToken) throws SimpleDBException {
+        try {
+            GetAttributesRequest req = new GetAttributesRequest(table, key).withConsistentRead(true);
+            List<Attribute> attributes = simpleDB.getAttributes(req).getAttributes();
+            List<Attribute> expectedAttributes = removeExpectedToken(attributes, UNIQUE_LOCK_ATTR, accessLockToken);
+            if(expectedAttributes == null || expectedAttributes.size() <= 1) {
+                logger.warn("SimpleDB unique retrieve failed for " + table + "/" + key);
+                return null;
+            } else {
+                logger.debug("SimpleDB got " + expectedAttributes.size() + " expected attributes for unique access token " + accessLockToken);
+                T result = type.newInstance();
+                result.init(key, asMap(expectedAttributes));
+                logger.info("SimpleDB retrieved and deleted " + table + "/" + key);
+                return result;
+            }
+        } catch (InstantiationException e) {
+            throw new SimpleDBException(e.getMessage(), e);
+        } catch (IllegalAccessException e) {
+            throw new SimpleDBException(e.getMessage(), e);
+        }
+    }
+
+    private String newAccessLockToken() {
+        // todo: return time-based key, clean-up stale locks
+        return UUID.randomUUID().toString();
+    }
+
+    /**
+     * Mark an entry as locked. Callers should finally { accessUnlock(.., accessLockToken) }
+     *
+     * The lock operation is not guaranteed and no exceptions are thrown if lock fails.
+     * Subsequent operations that use the returned access lock token will fail if the lock operation failed.
+     *
+     * @return access lock token to be used with subsequent locked access operations
+     */
+    private String accessLock(String table, String key) {
+        String uniqueToken = newAccessLockToken();
+        final ReplaceableAttribute uniqueRetrieve = new ReplaceableAttribute(UNIQUE_LOCK_ATTR, uniqueToken, false);
+        final UpdateCondition nonExistCondition = new UpdateCondition().withName(UNIQUE_LOCK_ATTR).withExists(false);
+        PutAttributesRequest uniqueTokenRequest = new PutAttributesRequest(
+            table,
+            key,
+            new ArrayList<ReplaceableAttribute>() {{ add(uniqueRetrieve); }},
+            nonExistCondition);
+
+        simpleDB.putAttributes(uniqueTokenRequest);
+        return uniqueToken;
+    }
+
+    /**
+     * Remove the access lock token from the specified entry.
+     */
+    private void accessUnlock(String table, String key, final String lockToken) {
+        try {
+            List<Attribute> lockAttr = new ArrayList<Attribute>(1) {{
+                add(new Attribute(UNIQUE_LOCK_ATTR, lockToken) );
+            }};
+            UpdateCondition tokenExists = new UpdateCondition().withName(UNIQUE_LOCK_ATTR).withValue(lockToken);
+            simpleDB.deleteAttributes(new DeleteAttributesRequest(table, key, lockAttr, tokenExists));
+        } catch (Exception e) {
+            logger.error("Error removing access lock (" + lockToken + ") for " + table + " / " + key);
+        }
     }
 }

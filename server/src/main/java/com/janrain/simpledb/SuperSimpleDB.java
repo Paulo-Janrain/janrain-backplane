@@ -1,19 +1,3 @@
-/*
- * Copyright 2011 Janrain, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.janrain.simpledb;
 
 import com.janrain.message.NamedMap;
@@ -45,6 +29,12 @@ public interface SuperSimpleDB {
     public <T extends NamedMap> void store(String table, Class<T> type, T data) throws SimpleDBException;
 
     /**
+     * Updates an expected, existing entry with a new one.
+     * Throws if the provided expected entry is not equal to the one in the database.
+     */
+    public <T extends NamedMap> void update(String table, Class<T> type, T expected, T updated) throws SimpleDBException;
+
+    /**
      * Deletes the entry associated with the provided key from the specified table.
      */
     public void delete(String table, String key) throws SimpleDBException;
@@ -55,7 +45,7 @@ public interface SuperSimpleDB {
     public void deleteWhere(String table, String whereClause) throws SimpleDBException;
 
     /**
-     * Retrieves the entry for the provided key from the specified table/domain.
+     * Returns the entry for the provided key from the specified table/domain, or null if not found.
      */
     public <T extends NamedMap> T retrieve(String table, Class<T> type, String key) throws SimpleDBException;
 
