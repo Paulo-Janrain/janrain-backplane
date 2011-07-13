@@ -253,6 +253,15 @@
 				<configuration>
 					<warName>backplane-server-${project.version}</warName>
 				</configuration>
+        <executions>
+          <execution>
+            <id>prepare-war</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>exploded</goal>
+            </goals>
+          </execution>
+        </executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -267,6 +276,30 @@
 					</execution>
 				</executions>
 			</plugin>
+      <plugin>
+        <!-- replace version in file -->
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>maven-replacer-plugin</artifactId>
+        <version>1.3.2</version>
+        <executions>
+          <execution>
+            <!-- the replace should happen before the app is packaged -->
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <file>target/${project.artifactId}-${project.version}/WEB-INF/classes/build.properties</file>
+          <replacements>
+            <replacement>
+              <token>MAVEN_BUILD_VERSION</token>
+              <value>${project.version}</value>
+            </replacement>
+          </replacements>
+        </configuration>
+      </plugin>
 		</plugins>
 	</build>
 </project>

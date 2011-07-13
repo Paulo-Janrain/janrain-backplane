@@ -42,6 +42,8 @@
 
     <bean id="superSimpleDB" class="com.janrain.simpledb.SuperSimpleDBImpl" />
 
+    <bean id="BpIdFilter" class="com.janrain.servlet.InstanceIdFilter" />
+
     <bean id="bpConfig" class="com.janrain.backplane.server.config.BackplaneConfig"/>
 
 </beans>

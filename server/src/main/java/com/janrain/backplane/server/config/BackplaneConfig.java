@@ -30,6 +30,8 @@ import org.springframework.context.annotation.Scope;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+import java.io.IOException;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -96,6 +98,14 @@ public class BackplaneConfig {
         }
     }
 
+    public String getInstanceId() {
+        return bpInstanceId;
+    }
+
+    public String getBuildVersion() {
+        return buildProperties.getProperty(BUILD_VERSION_PROPERTY);
+    }
+
     // - PACKAGE
 
     static String getAwsEnv(String envParamName) {
@@ -118,6 +128,11 @@ public class BackplaneConfig {
 
     private static final Logger logger = Logger.getLogger(BackplaneConfig.class);
 
+    private static final String BUILD_PROPERTIES = "/build.properties";
+    private static final String BUILD_VERSION_PROPERTY = "build.version";
+    private static final Properties buildProperties = new Properties();
+
+
     private static final String BP_AWS_INSTANCE_ID = "PARAM1";
     private static final String BP_SERVER_CONFIG_TABLE_SUFFIX = "_bpserverconfig";
     private static final String BP_ADMIN_AUTH_TABLE_SUFFIX = "_Admin";
@@ -137,6 +152,14 @@ public class BackplaneConfig {
     @SuppressWarnings({"UnusedDeclaration"})
     private BackplaneConfig() {
         this.bpInstanceId = getAwsProp(BP_AWS_INSTANCE_ID);
+        try {
+            buildProperties.load(BackplaneConfig.class.getResourceAsStream(BUILD_PROPERTIES));
+        } catch (IOException e) {
+            String err = "Error loading build properties from " + BUILD_PROPERTIES;
+            logger.error(err, e);
+            throw new RuntimeException(err, e);
+        }
+
         logger.info("Configured Backplane Server instance: " + bpInstanceId);
     }
 

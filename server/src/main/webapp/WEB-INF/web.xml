@@ -21,7 +21,29 @@
 	version="2.5">
 	<display-name>Janrain Backplane Server</display-name>
 
-	<filter>
+  <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>
+      classpath:spring/app-config.xml
+    </param-value>
+  </context-param>
+  <listener>
+    <listener-class>
+      org.springframework.web.context.ContextLoaderListener
+    </listener-class>
+  </listener>
+
+  <filter>
+    <description>Add X-BP-Instance response header</description>
+    <filter-name>BpIdFilter</filter-name>
+    <filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>BpIdFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <filter>
 		<description>Logs processing time for each request</description>
 		<filter-name>timer</filter-name>
 		<filter-class>com.janrain.servlet.ProcessTimeLoggingFilter</filter-class>
