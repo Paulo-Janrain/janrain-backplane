@@ -18,6 +18,7 @@ package com.janrain.backplane.server;
 
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.MessageField;
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -36,13 +37,11 @@ public class BackplaneMessage extends AbstractMessage {
         d.put(Field.ID.getFieldName(), id);
         d.put(Field.BUS.getFieldName(), bus);
         d.put(Field.CHANNEL_NAME.getFieldName(), channel);
-        try {
-            d.put(Field.PAYLOAD.getFieldName(), (new ObjectMapper()).writeValueAsString(data.get(Field.PAYLOAD.getFieldName())));
-        } catch (IOException e) {
-            String errMsg = "Error serializing message payload: " + e.getMessage();
-            logger.error(errMsg);
-            throw new BackplaneServerException(errMsg, e);
+        String sticky = extractFieldValueAsJsonString(Field.STICKY, data);
+        if (StringUtils.isNotEmpty(sticky)) {
+            d.put(Field.STICKY.getFieldName(), sticky);
         }
+        d.put(Field.PAYLOAD.getFieldName(), extractFieldValueAsJsonString(Field.PAYLOAD, data));
         super.init(id, d);
     }
 
@@ -85,6 +84,7 @@ public class BackplaneMessage extends AbstractMessage {
         ID("id", false),
         CHANNEL_NAME("channel_name", false),
         BUS("bus", false),
+        STICKY("sticky", false),
         SOURCE("source"),
         TYPE("type"),
         PAYLOAD("payload");
@@ -98,6 +98,8 @@ public class BackplaneMessage extends AbstractMessage {
         public boolean isRequired() {
             return required;
         }
+
+        // todo: more validation
 
         @Override
         public void validate(String value) throws RuntimeException {
@@ -128,4 +130,13 @@ public class BackplaneMessage extends AbstractMessage {
 
     private static final Logger logger = Logger.getLogger(BackplaneMessage.class);
 
+    private String extractFieldValueAsJsonString(Field field, Map<String,String> data) throws BackplaneServerException {
+        try {
+            return (new ObjectMapper()).writeValueAsString(data.get(field.getFieldName()));
+        } catch (IOException e) {
+            String errMsg = "Error serializing message payload: " + e.getMessage();
+            logger.error(errMsg);
+            throw new BackplaneServerException(errMsg, e);
+        }
+    }
 }

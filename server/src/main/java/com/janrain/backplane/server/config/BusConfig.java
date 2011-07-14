@@ -65,7 +65,17 @@ public class BusConfig extends AbstractMessage {
                 if (isRequired() || value != null) {
                     validateInt(getFieldName(), value);
                 }
+            }},
+
+        RETENTION_STICKY_TIME_SECONDS {
+            @Override
+            public void validate(String value) throws RuntimeException {
+                if (isRequired() || value != null) {
+                    validateInt(getFieldName(), value);
+                }
             }};
+
+
 
         @Override
         public String getFieldName() {

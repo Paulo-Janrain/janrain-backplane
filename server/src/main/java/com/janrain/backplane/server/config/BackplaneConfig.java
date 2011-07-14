@@ -36,10 +36,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.janrain.backplane.server.BackplaneMessage.Field.CHANNEL_NAME;
-import static com.janrain.backplane.server.BackplaneMessage.Field.ID;
-import static com.janrain.backplane.server.config.BusConfig.Field.BUS_NAME;
-import static com.janrain.backplane.server.config.BusConfig.Field.RETENTION_TIME_SECONDS;
+import static com.janrain.backplane.server.BackplaneMessage.Field.*;
+import static com.janrain.backplane.server.config.BusConfig.Field.*;
 
 
 /**
@@ -198,7 +196,10 @@ public class BackplaneConfig {
             String messagesTable = getMessagesTableName();
             for(BusConfig busConfig : simpleDb.retrieve(getTableNameForType(BusConfig.class), BusConfig.class)) {
                 try {
-                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), busConfig.get(RETENTION_TIME_SECONDS)));
+                    // non-sticky
+                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), false, busConfig.get(RETENTION_TIME_SECONDS)));
+                    // sticky
+                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), true, busConfig.get(RETENTION_STICKY_TIME_SECONDS)));
                 } catch (SimpleDBException sdbe) {
                     logger.error("Error cleaning up expired messages on bus "  + busConfig.get(BUS_NAME) + ", " + sdbe.getMessage(), sdbe);
                 }
@@ -211,9 +212,11 @@ public class BackplaneConfig {
         }
     }
 
-    private String getExpiredMessagesClause(String busId, String retentionTimeSeconds) {
-        return CHANNEL_NAME.getFieldName() + " like '" + busId + "%' AND " +
-               ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
+    private String getExpiredMessagesClause(String busId, boolean sticky, String retentionTimeSeconds) {
+        return "where " +
+            BUS.getFieldName() + " = '" + busId + "'" +
+            STICKY.getFieldName() + " is " + (sticky ? " not " : "") + " null AND " +
+            ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
     }
 
     @Inject

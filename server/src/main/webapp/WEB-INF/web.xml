@@ -101,6 +101,10 @@
 		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
 		<url-pattern>/v1.1/*</url-pattern>
 	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
+		<url-pattern>/v1.2/*</url-pattern>
+	</servlet-mapping>
 	<error-page>
         <error-code>500</error-code>
         <location>/WEB-INF/views/error.jsp</location>

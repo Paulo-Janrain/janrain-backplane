@@ -57,13 +57,19 @@ public class BackplaneController {
     public @ResponseBody List<HashMap<String,Object>> getBusMessages(
                                 @RequestHeader(value = "Authorization") String basicAuth,
                                 @PathVariable String bus,
-                                @RequestParam(value = "since", defaultValue = "") String since) throws AuthException, SimpleDBException, BackplaneServerException {
+                                @RequestParam(value = "since", defaultValue = "") String since,
+                                @RequestParam(value = "sticky", required = false) String sticky )
+        throws AuthException, SimpleDBException, BackplaneServerException {
+
         checkAuth(basicAuth, bus, BackplaneConfig.BUS_PERMISSION.GETALL);
 
         StringBuilder whereClause = new StringBuilder()
             .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'");
         if (! StringUtils.isEmpty(since)) {
             whereClause.append(" and ").append(BackplaneMessage.Field.ID.getFieldName()).append(" > '").append(since).append("'");
+        }
+        if (! StringUtils.isEmpty(sticky)) {
+            whereClause.append(" and ").append(BackplaneMessage.Field.STICKY.getFieldName()).append("='").append(sticky).append("'");
         }
 
         List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
@@ -79,9 +85,11 @@ public class BackplaneController {
                                 @PathVariable String bus,
                                 @PathVariable String channel,
                                 @RequestParam String callback,
-                                @RequestParam(value = "since", required = false) String since) throws SimpleDBException, AuthException, BackplaneServerException {
+                                @RequestParam(value = "since", required = false) String since,
+                                @RequestParam(value = "sticky", required = false) String sticky )
+        throws SimpleDBException, AuthException, BackplaneServerException {
 
-        return paddedResponse(callback, NEW_CHANNEL_LAST_PATH.equals(channel) ? newChannel() : getChannelMessages(bus, channel, since));
+        return paddedResponse(callback, NEW_CHANNEL_LAST_PATH.equals(channel) ? newChannel() : getChannelMessages(bus, channel, since, sticky));
 
     }
 
@@ -245,13 +253,16 @@ public class BackplaneController {
         return "\"" + randomString(CHANNEL_NAME_LENGTH) +"\"";
     }
 
-    private String getChannelMessages(String bus, String channel, String since) throws SimpleDBException, BackplaneServerException {
+    private String getChannelMessages(String bus, String channel, String since, String sticky) throws SimpleDBException, BackplaneServerException {
 
         StringBuilder whereClause = new StringBuilder()
             .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'")
             .append(" and ").append(BackplaneMessage.Field.CHANNEL_NAME.getFieldName()).append("='").append(channel).append("'");
         if (! StringUtils.isEmpty(since)) {
             whereClause.append(" and ").append(BackplaneMessage.Field.ID.getFieldName()).append(" > '").append(since).append("'");
+        }
+        if (! StringUtils.isEmpty(sticky)) {
+            whereClause.append(" and ").append(BackplaneMessage.Field.STICKY.getFieldName()).append("='").append(sticky).append("'");
         }
 
         List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString());
