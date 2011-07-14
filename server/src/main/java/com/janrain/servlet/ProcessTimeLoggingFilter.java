@@ -16,6 +16,7 @@
 
 package com.janrain.servlet;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
@@ -51,7 +52,18 @@ public class ProcessTimeLoggingFilter implements Filter {
                 output.append("?").append(servletRequest.getQueryString());
 			}
 			output.append("]");
+            output.append(" Remote Addr [ ").append(servletRequest.getRemoteAddr()).append(" ] ");
 
+            String referer = servletRequest.getHeader("referer");
+            if (StringUtils.isNotBlank(referer)) {
+                output.append(" Referer [ ").append(referer).append(" ] ");
+            }
+
+            String userAgent = servletRequest.getHeader("user-agent");
+            if (StringUtils.isNotBlank(userAgent)) {
+                output.append(" [ ").append(userAgent).append(" ] ");
+            }
+            
 			logger.debug(output);
 		}
 		else {
