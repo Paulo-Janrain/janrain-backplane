@@ -31,7 +31,10 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Properties;
+import java.util.TimeZone;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +54,10 @@ public class BackplaneConfig {
     // - PUBLIC
 
     public enum BUS_PERMISSION { GETALL, POST, GETPAYLOAD, IDENTITY }
+
+    public static final SimpleDateFormat ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") {{
+        setTimeZone(TimeZone.getTimeZone("GMT"));
+    }};
 
     public void checkAdminAuth(String user, String password) throws AuthException {
         checkAuth(getAdminAuthTableName(), user, password);
@@ -216,7 +223,9 @@ public class BackplaneConfig {
         return "where " +
             BUS.getFieldName() + " = '" + busId + "' AND " +
             STICKY.getFieldName() + " is " + (sticky ? " not " : "") + " null AND " +
-            ID.getFieldName() + " < '" + Long.toString(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000) + "'";
+            ID.getFieldName() + " < '" +
+            ISO8601.format(new Date(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000))
+            + "'";
     }
 
     @Inject

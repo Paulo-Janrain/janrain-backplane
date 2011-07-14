@@ -35,7 +35,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -155,15 +154,12 @@ public class BackplaneController {
 
     private static final Random random = new SecureRandom();
 
-    private static final SimpleDateFormat ISO8601 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") {{
-        setTimeZone(TimeZone.getTimeZone("GMT"));
-    }};
 
     /**
      * @return a time-based, lexicographically comparable message ID.
      */
     private static String generateMessageId() {
-        return ISO8601.format(new Date()) + "-" + randomString(10);
+        return BackplaneConfig.ISO8601.format(new Date()) + "-" + randomString(10);
     }
 
     private static String randomString(int length) {
