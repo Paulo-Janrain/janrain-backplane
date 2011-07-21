@@ -220,8 +220,7 @@ public class BackplaneConfig {
     }
 
     private String getExpiredMessagesClause(String busId, boolean sticky, String retentionTimeSeconds) {
-        return "where " +
-            BUS.getFieldName() + " = '" + busId + "' AND " +
+        return BUS.getFieldName() + " = '" + busId + "' AND " +
             STICKY.getFieldName() + " is " + (sticky ? " not " : "") + " null AND " +
             ID.getFieldName() + " < '" +
             ISO8601.format(new Date(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000))
