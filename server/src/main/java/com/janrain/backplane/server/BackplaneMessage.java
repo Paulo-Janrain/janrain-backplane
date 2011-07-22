@@ -23,6 +23,8 @@ import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 
 /**
@@ -81,11 +83,21 @@ public class BackplaneMessage extends AbstractMessage {
     }
 
     public static enum Field implements MessageField {
-        ID("id", false),
-        CHANNEL_NAME("channel_name", false),
-        BUS("bus", false),
+        ID("id"),
+        CHANNEL_NAME("channel_name"),
+        BUS("bus"),
         STICKY("sticky", false),
-        SOURCE("source"),
+        SOURCE("source") {
+            @Override
+            public void validate(String value) throws RuntimeException {
+                super.validate(value);
+                try {
+                    new URL(value);
+                } catch (MalformedURLException e) {
+                    throw new IllegalArgumentException("Invalid URL for " + getFieldName() + ": " + value, e);
+                }
+            }},
+
         TYPE("type"),
         PAYLOAD("payload");
 
@@ -99,17 +111,15 @@ public class BackplaneMessage extends AbstractMessage {
             return required;
         }
 
-        // todo: more validation
-
         @Override
         public void validate(String value) throws RuntimeException {
-            if (isRequired()) validateNotNull(name(), value);
+            if (isRequired()) validateNotNull(getFieldName(), value);
         }
 
         // - PRIVATE
 
         private String fieldName;
-        private boolean required;
+        private boolean required = true;
 
         private Field(String fieldName) {
             this(fieldName, true);
@@ -132,7 +142,8 @@ public class BackplaneMessage extends AbstractMessage {
 
     private String extractFieldValueAsJsonString(Field field, Map<String,String> data) throws BackplaneServerException {
         try {
-            return (new ObjectMapper()).writeValueAsString(data.get(field.getFieldName()));
+            Object value = data.get(field.getFieldName());
+            return value == null ? null : (new ObjectMapper()).writeValueAsString(value);
         } catch (IOException e) {
             String errMsg = "Error serializing message payload: " + e.getMessage();
             logger.error(errMsg);
