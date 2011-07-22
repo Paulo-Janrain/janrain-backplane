@@ -240,6 +240,9 @@ public class BackplaneController {
     }
 
     private String paddedResponse(String callback, String s) {
+        if (StringUtils.isBlank(callback)) {
+            throw new IllegalArgumentException("Callback cannot be blank.");
+        }
         StringBuilder result = new StringBuilder(callback);
         result.append("(").append(s).append(")");
         return result.toString();
