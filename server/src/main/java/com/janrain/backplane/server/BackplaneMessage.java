@@ -71,7 +71,7 @@ public class BackplaneMessage extends AbstractMessage {
         try {
             msg.put(
                 BackplaneMessage.Field.PAYLOAD.getFieldName(),
-                (new ObjectMapper()).readValue(get(BackplaneMessage.Field.PAYLOAD), LinkedHashMap.class) );
+                (new ObjectMapper()).readValue(get(BackplaneMessage.Field.PAYLOAD), Object.class) ); // un-quote the value
         } catch (IOException e) {
             String errMsg = "Error deserializing message payload: " + e.getMessage();
             logger.error(errMsg);
