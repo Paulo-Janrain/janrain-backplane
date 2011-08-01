@@ -63,7 +63,11 @@ public class BusConfig extends AbstractMessage {
             @Override
             public void validate(String value) throws RuntimeException {
                 if (isRequired() || value != null) {
-                    validateInt(getFieldName(), value);
+                    String fieldName = getFieldName();
+                    int intValue = validateInt(fieldName, value);
+                    if (intValue < RETENTION_MIN_VALUE || intValue > RETENTION_MAX_VALUE) {
+                        throw new IllegalArgumentException("Value of " + fieldName + " must be between " + RETENTION_MIN_VALUE + " and " + RETENTION_MAX_VALUE);
+                    }
                 }
             }},
 
@@ -71,7 +75,12 @@ public class BusConfig extends AbstractMessage {
             @Override
             public void validate(String value) throws RuntimeException {
                 if (isRequired() || value != null) {
-                    validateInt(getFieldName(), value);
+                    String fieldName = getFieldName();
+                    validateInt(fieldName, value);
+                    int intValue = validateInt(fieldName, value);
+                    if (intValue < RETENTION_STICKY_MIN_VALUE || intValue > RETENTION_STICKY_MAX_VALUE) {
+                        throw new IllegalArgumentException("Value of " + fieldName + " must be between " + RETENTION_STICKY_MIN_VALUE + " and " + RETENTION_STICKY_MAX_VALUE);
+                    }
                 }
             }};
 
@@ -91,6 +100,14 @@ public class BusConfig extends AbstractMessage {
         public void validate(String value) throws RuntimeException {
             if (isRequired()) validateNotNull(name(), value);
         }
+
+        // - PRIVATE
+
+        private static final int RETENTION_MIN_VALUE = 60;
+        private static final int RETENTION_MAX_VALUE = 604800; // one week
+        private static final int RETENTION_STICKY_MIN_VALUE = 21600; // six hours todo: update to what ends up in the spec
+        private static final int RETENTION_STICKY_MAX_VALUE = 604800; // one week
+
     }
 
     // - PRIVATE

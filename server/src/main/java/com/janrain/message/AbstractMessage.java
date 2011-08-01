@@ -95,11 +95,13 @@ public abstract class AbstractMessage extends AbstractNamedMap implements Messag
     }
 
     /**
+     * @return the parsed integer
+     *
      * @throws IllegalArgumentException if the value is not a valid integer.
      */
-    protected static void validateInt(String fieldName, String value) {
+    protected static int validateInt(String fieldName, String value) {
         try {
-            Integer.parseInt(value);
+            return Integer.parseInt(value);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Number expected for " + fieldName + " got: " + value, e);
         }
