@@ -52,7 +52,7 @@ public class BackplaneController {
     @RequestMapping(value = "/", method = RequestMethod.GET)
     public @ResponseBody String blank() { return ""; }
 
-    @RequestMapping(value = "/bus/{bus}/", method = RequestMethod.GET)
+    @RequestMapping(value = "/bus/{bus}", method = RequestMethod.GET)
     public @ResponseBody List<HashMap<String,Object>> getBusMessages(
                                 @RequestHeader(value = "Authorization", required = false) String basicAuth,
                                 @PathVariable String bus,
