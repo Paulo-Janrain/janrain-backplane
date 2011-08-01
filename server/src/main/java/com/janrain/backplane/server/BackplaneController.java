@@ -54,7 +54,7 @@ public class BackplaneController {
 
     @RequestMapping(value = "/bus/{bus}/", method = RequestMethod.GET)
     public @ResponseBody List<HashMap<String,Object>> getBusMessages(
-                                @RequestHeader(value = "Authorization") String basicAuth,
+                                @RequestHeader(value = "Authorization", required = false) String basicAuth,
                                 @PathVariable String bus,
                                 @RequestParam(value = "since", defaultValue = "") String since,
                                 @RequestParam(value = "sticky", required = false) String sticky )
@@ -94,7 +94,7 @@ public class BackplaneController {
 
     @RequestMapping(value = "/bus/{bus}/channel/{channel}", method = RequestMethod.POST)
     public @ResponseBody String postToChannel(
-                                @RequestHeader(value = "Authorization") String basicAuth,
+                                @RequestHeader(value = "Authorization", required = false) String basicAuth,
                                 @RequestBody List<Map<String,String>> messages,
                                 @PathVariable String bus,
                                 @PathVariable String channel) throws AuthException, SimpleDBException, BackplaneServerException {
