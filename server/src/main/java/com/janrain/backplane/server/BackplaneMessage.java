@@ -18,7 +18,6 @@ package com.janrain.backplane.server;
 
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.MessageField;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 
@@ -34,15 +33,11 @@ public class BackplaneMessage extends AbstractMessage {
 
     // - PUBLIC
 
-    public BackplaneMessage(String id, String bus, String channel, Map<String, String> data) throws BackplaneServerException {
-        Map<String,String> d = new LinkedHashMap<String, String>(data);
+    public BackplaneMessage(String id, String bus, String channel, Map<String, Object> data) throws BackplaneServerException {
+        Map<String,String> d = new LinkedHashMap<String, String>(toStringMap(data));
         d.put(Field.ID.getFieldName(), id);
         d.put(Field.BUS.getFieldName(), bus);
         d.put(Field.CHANNEL_NAME.getFieldName(), channel);
-        String sticky = extractFieldValueAsJsonString(Field.STICKY, data);
-        if (StringUtils.isNotEmpty(sticky)) {
-            d.put(Field.STICKY.getFieldName(), sticky);
-        }
         d.put(Field.PAYLOAD.getFieldName(), extractFieldValueAsJsonString(Field.PAYLOAD, data));
         super.init(id, d);
     }
@@ -68,6 +63,11 @@ public class BackplaneMessage extends AbstractMessage {
         msg.remove(Field.ID.getFieldName());
         msg.remove(Field.BUS.getFieldName());
         msg.remove(Field.CHANNEL_NAME.getFieldName());
+        String sticky = get(Field.STICKY.getFieldName());
+        if (sticky != null) {
+            // print sticky as a (json) boolean
+            msg.put(Field.STICKY.getFieldName(), Boolean.valueOf(sticky));
+        }
         try {
             msg.put(
                 BackplaneMessage.Field.PAYLOAD.getFieldName(),
@@ -86,7 +86,14 @@ public class BackplaneMessage extends AbstractMessage {
         ID("id"),
         CHANNEL_NAME("channel_name"),
         BUS("bus"),
-        STICKY("sticky", false),
+        STICKY("sticky", false) {
+            @Override
+            public void validate(String value) throws RuntimeException {
+                super.validate(value);
+                if (value != null && ! Boolean.TRUE.toString().equalsIgnoreCase(value) && ! Boolean.FALSE.toString().equalsIgnoreCase(value)) {
+                    throw new IllegalArgumentException("Invalid boolean value for " + getFieldName() + ": " + value);
+                }
+            }},
         SOURCE("source") {
             @Override
             public void validate(String value) throws RuntimeException {
@@ -140,7 +147,7 @@ public class BackplaneMessage extends AbstractMessage {
 
     private static final Logger logger = Logger.getLogger(BackplaneMessage.class);
 
-    private String extractFieldValueAsJsonString(Field field, Map<String,String> data) throws BackplaneServerException {
+    private String extractFieldValueAsJsonString(Field field, Map<String,Object> data) throws BackplaneServerException {
         try {
             Object value = data.get(field.getFieldName());
             return value == null ? null : (new ObjectMapper()).writeValueAsString(value);

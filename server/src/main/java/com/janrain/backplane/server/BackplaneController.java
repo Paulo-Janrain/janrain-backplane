@@ -95,12 +95,12 @@ public class BackplaneController {
     @RequestMapping(value = "/bus/{bus}/channel/{channel}", method = RequestMethod.POST)
     public @ResponseBody String postToChannel(
                                 @RequestHeader(value = "Authorization", required = false) String basicAuth,
-                                @RequestBody List<Map<String,String>> messages,
+                                @RequestBody List<Map<String,Object>> messages,
                                 @PathVariable String bus,
                                 @PathVariable String channel) throws AuthException, SimpleDBException, BackplaneServerException {
         checkAuth(basicAuth, bus, BackplaneConfig.BUS_PERMISSION.POST);
 
-        for(Map<String,String> messageData : messages) {
+        for(Map<String,Object> messageData : messages) {
             BackplaneMessage message = new BackplaneMessage(generateMessageId(), bus, channel, messageData);
             simpleDb.store(bpConfig.getMessagesTableName(), BackplaneMessage.class, message);
         }
