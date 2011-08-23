@@ -29,6 +29,15 @@ public interface SuperSimpleDB {
     public <T extends NamedMap> void store(String table, Class<T> type, T data) throws SimpleDBException;
 
     /**
+     * Stores the provided entry under the specified table/domain (which is created if it doesn't exist).
+     *
+     * @param longFields if true, fields with either key or value longer than SimpleDB's limits will be
+     * split into multiple fields, and transparently recombined on retrieval. 
+     * See http://docs.amazonwebservices.com/AmazonSimpleDB/latest/DeveloperGuide/SDBLimits.html
+     */
+    public <T extends NamedMap> void store(String table, Class<T> type, T data, boolean longFields) throws SimpleDBException;
+
+    /**
      * Updates an expected, existing entry with a new one.
      * Throws if the provided expected entry is not equal to the one in the database.
      */
