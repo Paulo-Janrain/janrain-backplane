@@ -39,6 +39,9 @@ public class BackplaneMessage extends AbstractMessage {
         d.put(Field.BUS.getFieldName(), bus);
         d.put(Field.CHANNEL_NAME.getFieldName(), channel);
         d.put(Field.PAYLOAD.getFieldName(), extractFieldValueAsJsonString(Field.PAYLOAD, data));
+        if (! d.containsKey(Field.STICKY.getFieldName())) {
+            d.put(Field.STICKY.getFieldName(), Boolean.FALSE.toString());
+        }
         super.init(id, d);
     }
 
