@@ -102,7 +102,7 @@ public class BackplaneController {
 
         for(Map<String,Object> messageData : messages) {
             BackplaneMessage message = new BackplaneMessage(generateMessageId(), bus, channel, messageData);
-            simpleDb.store(bpConfig.getMessagesTableName(), BackplaneMessage.class, message);
+            simpleDb.store(bpConfig.getMessagesTableName(), BackplaneMessage.class, message, true); // todo: make long entries support configurable
         }
 
         return "";

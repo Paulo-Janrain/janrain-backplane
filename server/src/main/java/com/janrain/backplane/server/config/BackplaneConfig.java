@@ -113,6 +113,11 @@ public class BackplaneConfig {
 
     // - PACKAGE
 
+
+    BackplaneConfig(String instanceId) {
+        this.bpInstanceId = instanceId;
+    }
+
     static String getAwsEnv(String envParamName) {
         String result = System.getenv(envParamName);
         if (StringUtils.isBlank(result)) {
@@ -221,6 +226,8 @@ public class BackplaneConfig {
 
     private String getExpiredMessagesClause(String busId, boolean sticky, String retentionTimeSeconds) {
         return BUS.getFieldName() + " = '" + busId + "' AND " +
+            // todo: "is null" is low-performance on simpledb apparently
+            // http://practicalcloudcomputing.com/post/722621724/simpledb-essentials-for-high-performance-users-part-2
             STICKY.getFieldName() + " is " + (sticky ? " not " : "") + " null AND " +
             ID.getFieldName() + " < '" +
             ISO8601.format(new Date(System.currentTimeMillis() - Long.valueOf(retentionTimeSeconds) * 1000))
