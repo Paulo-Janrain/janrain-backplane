@@ -27,6 +27,9 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -80,16 +83,30 @@ public class BackplaneController {
     }
 
     @RequestMapping(value = "/bus/{bus}/channel/{channel}", method = RequestMethod.GET)
-    public @ResponseBody String getChannel(
+    public ResponseEntity<String> getChannel(
                                 @PathVariable String bus,
                                 @PathVariable String channel,
-                                @RequestParam String callback,
+                                @RequestParam(required = false) String callback,
                                 @RequestParam(value = "since", required = false) String since,
                                 @RequestParam(value = "sticky", required = false) String sticky )
         throws SimpleDBException, AuthException, BackplaneServerException {
 
-        return paddedResponse(callback, NEW_CHANNEL_LAST_PATH.equals(channel) ? newChannel() : getChannelMessages(bus, channel, since, sticky));
+        if (StringUtils.isBlank(callback)) {
+            return new ResponseEntity<String>(
+                    NEW_CHANNEL_LAST_PATH.equals(channel) ? newChannel() : getChannelMessages(bus, channel, since, sticky),
+                    new HttpHeaders() {{
+                        add("Content-Type", "application/json");
+                    }},
+                    HttpStatus.OK);
 
+        } else {
+            return new ResponseEntity<String>(
+                    paddedResponse(callback, NEW_CHANNEL_LAST_PATH.equals(channel) ? newChannel() : getChannelMessages(bus, channel, since, sticky)),
+                    new HttpHeaders() {{
+                        add("Content-Type", "application/x-javascript");
+                    }},
+                    HttpStatus.OK);
+        }
     }
 
     @RequestMapping(value = "/bus/{bus}/channel/{channel}", method = RequestMethod.POST)
