@@ -40,7 +40,7 @@
 	</mvc:interceptors>
 	
     <!-- Support JSON -->
- 	<bean id="messageAdapter" class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+ 	<bean id="handlerAdapter" class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
 		<property name="webBindingInitializer">
 			<!-- Configures Spring MVC DataBinder instances -->
 			<bean
@@ -50,6 +50,9 @@
 		</property>
         <property name="messageConverters">
             <list>
+                <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+                    <property name="writeAcceptCharset" value="false" />
+                </bean>
                 <bean class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"/>
             </list>
         </property>
