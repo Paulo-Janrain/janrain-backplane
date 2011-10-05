@@ -14,28 +14,35 @@
  * limitations under the License.
  */
 
-package com.janrain.backplane.server.provision;
-
-import java.util.Collections;
-import java.util.List;
-
 /**
- * @author Johnny Bufu
+ * @author Tom Raney
  */
-public class ListRequest extends AdminRequest {
+
+package com.janrain.backplane.server.metrics;
+
+
+public class MetricRequest {
 
     // - PUBLIC
 
-    public List<String> getEntities() {
-        return entities;
+    public String getUser() {
+        return user;
     }
 
-    @SuppressWarnings({"UnusedDeclaration"})
-    public void setEntities(List<String> entities) {
-        this.entities = Collections.unmodifiableList(entities);
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    public String getSecret() {
+        return secret;
+    }
+
+    public void setSecret(String secret) {
+        this.secret = secret;
     }
 
     // - PRIVATE
 
-    private List<String> entities;
+    private String user;
+    private String secret;
 }

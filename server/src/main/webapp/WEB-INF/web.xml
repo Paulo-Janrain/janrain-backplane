@@ -97,6 +97,11 @@
         </init-param>
 		<load-on-startup>1</load-on-startup>
 	</servlet>
+    <!-- host the static backplane.js file -->
+    <servlet-mapping>
+        <servlet-name>default</servlet-name>
+        <url-pattern>*.js</url-pattern>
+    </servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>Spring MVC Dispatcher Servlet</servlet-name>
 		<url-pattern>/v1/*</url-pattern>

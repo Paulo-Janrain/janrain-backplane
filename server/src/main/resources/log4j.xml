@@ -26,6 +26,16 @@
       <param name="ConversionPattern" value="%d %-5p [%t]: %c:%L - %m%n" />
 		</layout>
 	</appender>
+
+    <appender name="mail" class="org.apache.log4j.net.SMTPAppender">
+        <param name="BufferSize" value="10"/>
+        <param name="From" value="${PARAM1}@${PARAM2}"/>
+        <param name="To" value="${PARAM3}"/>
+        <param name="Subject" value="Backplane Errors"/>
+        <layout class="org.apache.log4j.EnhancedPatternLayout">
+            <param name="ConversionPattern" value="%d %-5p [%t]: %c:%L - %m%n"/>
+        </layout>
+    </appender>
 	
 	<!-- Janrain logger -->
 	<logger name="com.janrain">
@@ -69,6 +79,7 @@
 	<root>
 		<priority value="warn" />
 		<appender-ref ref="console" />
+        <appender-ref ref="mail" />
 	</root>
 	
 </log4j:configuration>

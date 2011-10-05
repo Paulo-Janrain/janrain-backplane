@@ -46,4 +46,6 @@
 
     <bean id="bpConfig" class="com.janrain.backplane.server.config.BackplaneConfig"/>
 
+    <bean id="metricAccumulator" class="com.janrain.backplane.server.metrics.MetricsAccumulator"/>
+
 </beans>

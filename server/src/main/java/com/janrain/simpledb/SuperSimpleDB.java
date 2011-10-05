@@ -59,6 +59,12 @@ public interface SuperSimpleDB {
     public <T extends NamedMap> T retrieve(String table, Class<T> type, String key) throws SimpleDBException;
 
     /**
+     * Returns a scalar value
+     */
+
+    public Long retrieveCount(String table, String query) throws SimpleDBException;
+
+    /**
      * Retrieves all entries from the specified table/domain.
      */
     public <T extends NamedMap> List<T> retrieve(String table, Class<T> type) throws SimpleDBException;
@@ -66,8 +72,10 @@ public interface SuperSimpleDB {
     /**
      * Retrieves all entries from the specified table/domain matching the provided where clause.
      * @param whereClause can be null or empty, in which case all entries are returned
+     * @param fetchAllTokens is set to true if all results are desired or false if "limit x" is being used
      */
-    public <T extends NamedMap> List<T> retrieveWhere(String table, Class<T> type, String whereClause) throws SimpleDBException;
+    public <T extends NamedMap> List<T> retrieveWhere(String table, Class<T> type, String whereClause, boolean fetchAllTokens) throws SimpleDBException;
+
 
     /**
      * Retrieves and deletes atomically the entry for the provided key from the specified table/domain.

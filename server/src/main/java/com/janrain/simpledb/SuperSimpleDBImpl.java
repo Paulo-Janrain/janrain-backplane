@@ -45,6 +45,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     public <T extends NamedMap> void store(String table, Class<T> type, T data) throws SimpleDBException {
         store(table, type, data, false);
     }
+
     @Override
     public <T extends NamedMap> void store(String table, Class<T> type, T data, boolean longFields) throws SimpleDBException {
         try {
@@ -87,7 +88,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     @Override
     public void deleteWhere(String table, String whereClause) throws SimpleDBException {
         try {
-            List<Item> items = doSelectWhere(table, whereClause);
+            List<Item> items = doSelectWhere(table, whereClause, true);
             for (List<DeletableItem> limitedList : asLimitedDeletableItemLists(items) ) {
                 simpleDB.batchDeleteAttributes(new BatchDeleteAttributesRequest(table, limitedList));
             }
@@ -101,7 +102,9 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     public <T extends NamedMap> T retrieve(String table, Class<T> type, String key) throws SimpleDBException {
         try {
             GetAttributesRequest req = new GetAttributesRequest(table, key).withConsistentRead(true);
+
             List<Attribute> attributes = simpleDB.getAttributes(req).getAttributes();
+
             if (attributes.isEmpty()) {
                 logger.info("SimpleDB no entry found for " + table + "/" + key);
                 return null;
@@ -121,15 +124,36 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     }
 
     @Override
-    public <T extends NamedMap> List<T> retrieve(String table, Class<T> type) throws SimpleDBException {
-        return retrieveWhere(table, type, null);
+    public Long retrieveCount(String table, String query) throws SimpleDBException {
+         try {
+            checkDomain(table);
+            SelectRequest selectRequest = new SelectRequest(query, false);
+            SelectResult selectResult= simpleDB.select(selectRequest);
+            //the following may need some tweaking to get around the
+            //5 second query limit - or, not
+            for (Item item : selectResult.getItems()) {
+                for (Attribute att : item.getAttributes()) {
+                    if ("Count".equals(att.getName()))
+                        return Long.valueOf(att.getValue());
+                }
+            }
+
+            throw new SimpleDBException("retrieveCount failed");
+        } catch (AmazonClientException e) {
+            throw new SimpleDBException(e.getMessage(), e);
+        }
     }
 
     @Override
-    public <T extends NamedMap> List<T> retrieveWhere(String table, Class<T> type, String whereClause) throws SimpleDBException {
+    public <T extends NamedMap> List<T> retrieve(String table, Class<T> type) throws SimpleDBException {
+        return retrieveWhere(table, type, null, true);
+    }
+
+    @Override
+    public <T extends NamedMap> List<T> retrieveWhere(String table, Class<T> type, String whereClause, boolean fetchAllTokens) throws SimpleDBException {
         try {
             List<T> result = new ArrayList<T>();
-            for (Item item : doSelectWhere(table, whereClause)) {
+            for (Item item : doSelectWhere(table, whereClause, fetchAllTokens)) {
                 T resultItem = type.newInstance();
                 resultItem.init(item.getName(), asMap(item.getAttributes()));
                 result.add(resultItem);
@@ -404,7 +428,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
         return found ? result : null;
     }
 
-    private List<Item> doSelectWhere(String table, String whereClause) throws SimpleDBException {
+    private List<Item> doSelectWhere(String table, String whereClause, boolean fetchAllTokens) throws SimpleDBException {
         try {
             List<Item> result = new ArrayList<Item>();
             String query = "select * from `" + table + "`" + (StringUtils.isBlank(whereClause) ? "" : " where " + whereClause);
@@ -416,12 +440,14 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
                 nextToken = selectResult.getNextToken();
                 result.addAll(selectResult.getItems());
                 selectRequest.setNextToken(nextToken);
-            } while (nextToken != null);
+            } while (nextToken != null && fetchAllTokens);
             return result;
         } catch (AmazonClientException e) {
             throw new SimpleDBException(e.getMessage(), e);
         }
     }
+
+
 
     private void doDelete(String table, String key, String accessLockToken) throws SimpleDBException {
         try {

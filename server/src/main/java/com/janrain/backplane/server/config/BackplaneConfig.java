@@ -17,12 +17,16 @@
 package com.janrain.backplane.server.config;
 
 import com.janrain.backplane.server.ApplicationException;
+import com.janrain.backplane.server.metrics.MetricMessage;
+import com.janrain.backplane.server.metrics.MetricsAccumulator;
 import com.janrain.crypto.HmacHashUtils;
 import com.janrain.message.AbstractMessage;
 import com.janrain.message.AbstractNamedMap;
 import com.janrain.message.NamedMap;
 import com.janrain.simpledb.SimpleDBException;
 import com.janrain.simpledb.SuperSimpleDB;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.TimerMetric;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.context.annotation.Scope;
@@ -32,9 +36,8 @@ import javax.annotation.PreDestroy;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Properties;
-import java.util.TimeZone;
+import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -63,16 +66,29 @@ public class BackplaneConfig {
         checkAuth(getAdminAuthTableName(), user, password);
     }
 
+    public void checkMetricAuth(String user, String password) throws AuthException {
+        checkAuth(getMetricAuthTableName(), user, password);
+    }
+
     public <T extends NamedMap> String getTableNameForType(Class<T> type) {
         return bpInstanceId + "_" + type.getSimpleName();
+    }
+
+    public String getMetricsTableName() {
+        return bpInstanceId +  BP_METRICS_TABLE_SUFFIX;
     }
 
     public String getMessagesTableName() {
         return bpInstanceId + BP_MESSAGES_TABLE_SUFFIX;
     }
+
+    public String getSamplesTableName() {
+        return bpInstanceId + BP_SAMPLES_TABLE_SUFFIX;
+    }
     
     /**
      * Retrieve a configuration entity by its name
+     *
      *
      * @param entityName	The entity name for the configuration
      * @return		        The entity configuration
@@ -93,6 +109,16 @@ public class BackplaneConfig {
 	public boolean isDebugMode() throws SimpleDBException {
 		return Boolean.valueOf(cachedGet(BpServerProperty.DEBUG_MODE));
 	}
+
+    /**
+     * @return the server default max message value per channel
+     * @throws SimpleDBException
+     */
+
+    public long getDefaultMaxMessageLimit() throws SimpleDBException {
+        Long max = Long.valueOf(cachedGet(BpServerProperty.DEFAULT_MESSAGES_MAX));
+        return max == null ? BackplaneConfig.BP_MAX_MESSAGES_DEFAULT : max;
+    }
 
     public Exception getDebugException(Exception e) {
         try {
@@ -148,15 +174,22 @@ public class BackplaneConfig {
     private static final String BP_ADMIN_AUTH_TABLE_SUFFIX = "_Admin";
     private static final String BP_CONFIG_ENTRY_NAME = "bpserverconfig";
     private static final String BP_MESSAGES_TABLE_SUFFIX = "_messages";
+    private static final String BP_SAMPLES_TABLE_SUFFIX = "_samples";
+    private static final String BP_METRICS_TABLE_SUFFIX = "_metrics";
+    private static final String BP_METRIC_AUTH_TABLE_SUFFIX = "_bpMetricAuth";
+    private static final long BP_MAX_MESSAGES_DEFAULT = 100;
 
     private final String bpInstanceId;
     private ScheduledExecutorService cleanup;
 
+    private final TimerMetric getMessagesTime =
+            Metrics.newTimer(BackplaneConfig.class, "cleanup_messages_time", TimeUnit.MILLISECONDS, TimeUnit.MINUTES);
 
     private static enum BpServerProperty {
         DEBUG_MODE,
         CONFIG_CACHE_AGE_SECONDS,
-        CLEANUP_INTERVAL_MINUTES
+        CLEANUP_INTERVAL_MINUTES,
+        DEFAULT_MESSAGES_MAX
     }
 
     @SuppressWarnings({"UnusedDeclaration"})
@@ -175,6 +208,7 @@ public class BackplaneConfig {
 
     private ScheduledExecutorService createCleanupTask() {
         long cleanupIntervalMinutes;
+        logger.info("calling createCleanupTask()");
         try {
             cleanupIntervalMinutes = Long.valueOf(cachedGet(BpServerProperty.CLEANUP_INTERVAL_MINUTES));
         } catch (SimpleDBException e) {
@@ -185,7 +219,19 @@ public class BackplaneConfig {
         cleanupTask.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                deleteExpiredMessages();
+                try {
+                    getMessagesTime.time(new Callable<Object>() {
+                        @Override
+                        public Object call() throws Exception {
+                            deleteExpiredMessages();
+                            return null;
+                        }
+                    });
+                } catch (Exception e) {
+                    logger.error("Error while cleaning up expired messages, " + e.getMessage(), e);
+                }
+
+                compileMetrics();
             }
 
         }, cleanupIntervalMinutes, cleanupIntervalMinutes, TimeUnit.MINUTES);
@@ -202,6 +248,23 @@ public class BackplaneConfig {
         this.cleanup.shutdownNow();
     }
 
+    private void compileMetrics() {
+
+        try {
+            MetricMessage metric = metricAccumulator.prepareSummary();
+
+            logger.debug("Storing metrics for instance " + MetricsAccumulator.getInstanceUuid());
+
+            MetricMessage oldMetric = simpleDb.retrieveAndDelete(getMetricsTableName(), MetricMessage.class, metric.getIdValue());
+
+            simpleDb.store(getMetricsTableName(), MetricMessage.class, metric, true);
+
+        } catch (Exception e) {
+            logger.error("Error compiling metrics " + e.getMessage(), e);
+        }
+
+    }
+
     private void deleteExpiredMessages() {
         try {
             logger.info("Backplane message cleanup task started.");
@@ -212,6 +275,9 @@ public class BackplaneConfig {
                     simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), false, busConfig.get(RETENTION_TIME_SECONDS)));
                     // sticky
                     simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), true, busConfig.get(RETENTION_STICKY_TIME_SECONDS)));
+
+                    // remove old metrics
+                    simpleDb.deleteWhere(getMetricsTableName(), getExpiredMetricClause());
                 } catch (SimpleDBException sdbe) {
                     logger.error("Error cleaning up expired messages on bus "  + busConfig.get(BUS_NAME) + ", " + sdbe.getMessage(), sdbe);
                 }
@@ -223,6 +289,20 @@ public class BackplaneConfig {
             logger.info("Backplane messages cleanup task finished.");
         }
     }
+
+    private String getExpiredMetricClause() {
+        int interval = 0;
+        try {
+            interval = Integer.valueOf(cachedGet(BpServerProperty.CLEANUP_INTERVAL_MINUTES));
+        } catch (SimpleDBException e) {
+            throw new RuntimeException("Error getting server property " + BpServerProperty.CLEANUP_INTERVAL_MINUTES, e);
+        }
+        Calendar now = Calendar.getInstance();
+        // Cleanup metrics that may be lingering due to a shutdown server instance
+        now.roll(Calendar.MINUTE, -(interval+2));
+        return "time < '" + ISO8601.format(now.getTime()) + "'";
+    }
+
 
     private String getExpiredMessagesClause(String busId, boolean sticky, String retentionTimeSeconds) {
         return BUS.getFieldName() + " = '" + busId + "' AND " +
@@ -237,6 +317,9 @@ public class BackplaneConfig {
     @Inject
     @SuppressWarnings({"UnusedDeclaration"})
     private SuperSimpleDB simpleDb;
+
+    @Inject
+    private MetricsAccumulator metricAccumulator;
 
     private Pair<BpServerConfigMap,Long> bpServerConfigCache;
 
@@ -265,13 +348,17 @@ public class BackplaneConfig {
         return bpInstanceId + BP_ADMIN_AUTH_TABLE_SUFFIX;
     }
 
+    private String getMetricAuthTableName() {
+        return bpInstanceId + BP_METRIC_AUTH_TABLE_SUFFIX;
+    }
+
     private Long getMaxCacheAge() {
         return bpServerConfigCache != null && bpServerConfigCache.left != null ?
             Long.valueOf(bpServerConfigCache.left.get(BpServerProperty.CONFIG_CACHE_AGE_SECONDS.name())) :
             null;
     }
 
-    private void checkAuth(String authTable, String user, String password) throws AuthException {
+    public void checkAuth(String authTable, String user, String password) throws AuthException {
         try {
             User userEntry = simpleDb.retrieve(authTable, User.class, user);
             String authKey = userEntry == null ? null : userEntry.get(User.Field.PWDHASH);
