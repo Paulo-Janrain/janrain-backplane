@@ -19,17 +19,9 @@ package com.janrain.backplane.server.metrics;
 import com.janrain.backplane.server.BackplaneServerException;
 import com.janrain.backplane.server.config.AuthException;
 import com.janrain.backplane.server.config.BackplaneConfig;
-import com.janrain.backplane.server.provision.AdminRequest;
-import com.janrain.backplane.server.provision.ListRequest;
-import com.janrain.message.MessageField;
 import com.janrain.simpledb.SimpleDBException;
 import com.janrain.simpledb.SuperSimpleDB;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.*;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,10 +29,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.inject.Inject;
-import java.io.IOException;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -57,7 +45,7 @@ public class MetricsController {
     private BackplaneConfig bpConfig;
 
     @Inject
-    private SuperSimpleDB simpleDb;
+    private SuperSimpleDB superSimpleDb;
 
     @Inject
     private MetricsAccumulator metricsAccumulator;
@@ -85,7 +73,7 @@ public class MetricsController {
 
     private String retrieveAllMetrics() throws SimpleDBException {
 
-        List<MetricMessage> metrics = simpleDb.retrieve(bpConfig.getMetricsTableName(), MetricMessage.class);
+        List<MetricMessage> metrics = superSimpleDb.retrieve(bpConfig.getMetricsTableName(), MetricMessage.class);
 
         StringBuilder sb = new StringBuilder().append("[");
 

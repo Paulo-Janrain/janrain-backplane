@@ -37,6 +37,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
@@ -60,7 +61,9 @@ public class BackplaneController {
     // - PUBLIC
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
-    public @ResponseBody String blank() { return ""; }
+    public ModelAndView greetings() {
+        return new ModelAndView("welcome");
+    }
 
     @RequestMapping(value = "/bus/{bus}", method = RequestMethod.GET)
     public @ResponseBody List<HashMap<String,Object>> getBusMessages(
@@ -75,6 +78,10 @@ public class BackplaneController {
         // log metric
         busGets.mark();
 
+        if (! StringUtils.isBlank(sticky) &&  "true".equalsIgnoreCase(sticky)) {
+            busGetsSticky.mark();
+        }
+
         StringBuilder whereClause = new StringBuilder()
             .append(BackplaneMessage.Field.BUS.getFieldName()).append("='").append(bus).append("'");
         if (! StringUtils.isEmpty(since)) {
@@ -84,7 +91,7 @@ public class BackplaneController {
             whereClause.append(" and ").append(BackplaneMessage.Field.STICKY.getFieldName()).append("='").append(sticky).append("'");
         }
 
-        List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString(), true);
+        List<BackplaneMessage> messages = superSimpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString(), true);
 
         List<HashMap<String,Object>> frames = new ArrayList<HashMap<String, Object>>();
         for (BackplaneMessage message : messages) {
@@ -105,6 +112,10 @@ public class BackplaneController {
 
         // log metric
         channelGets.mark();
+
+        if (! StringUtils.isBlank(sticky) &&  "true".equalsIgnoreCase(sticky)) {
+            channelGetsSticky.mark();
+        }
 
         if (StringUtils.isBlank(callback)) {
             return new ResponseEntity<String>(
@@ -133,7 +144,7 @@ public class BackplaneController {
         checkAuth(basicAuth, bus, BackplaneConfig.BUS_PERMISSION.POST);
 
         //Block post if the caller has exceeded the message post limit
-        Long count = simpleDb.retrieveCount(bpConfig.getMessagesTableName(),
+        Long count = superSimpleDb.retrieveCount(bpConfig.getMessagesTableName(),
                 "select count(*) from `" + bpConfig.getMessagesTableName() + "` where bus='" + bus + "' and channel_name='" + channel + "'");
 
         if (count >= bpConfig.getDefaultMaxMessageLimit()) {
@@ -148,7 +159,7 @@ public class BackplaneController {
 
         for(Map<String,Object> messageData : messages) {
             BackplaneMessage message = new BackplaneMessage(generateMessageId(), bus, channel, messageData);
-            simpleDb.store(bpConfig.getMessagesTableName(), BackplaneMessage.class, message, true); // todo: make long entries support configurable
+            superSimpleDb.store(bpConfig.getMessagesTableName(), BackplaneMessage.class, message, true); // todo: make long entries support configurable
         }
 
         return "";
@@ -223,9 +234,12 @@ public class BackplaneController {
 
     private final MeterMetric channelGets =
             Metrics.newMeter(BackplaneController.class, "channel_get", "channel_gets", TimeUnit.MINUTES);
+    private final MeterMetric channelGetsSticky = Metrics.newMeter(BackplaneController.class, "channel_gets_sticky", "channel_gets_sticky", TimeUnit.MINUTES);
+
 
     private final MeterMetric busGets =
             Metrics.newMeter(BackplaneController.class, "bus_get", "bus_gets", TimeUnit.MINUTES);
+    private final MeterMetric busGetsSticky = Metrics.newMeter(BackplaneController.class, "bus_gets_sticky", "bus_gets_sticky", TimeUnit.MINUTES);
 
     private final TimerMetric getMessagesTime =
             Metrics.newTimer(BackplaneController.class, "get_messages_time", TimeUnit.MILLISECONDS, TimeUnit.MINUTES);
@@ -238,7 +252,7 @@ public class BackplaneController {
     private BackplaneConfig bpConfig;
 
     @Inject
-    private SuperSimpleDB simpleDb;
+    private SuperSimpleDB superSimpleDb;
 
     @Inject
     private MetricsAccumulator metricAccumulator;
@@ -332,7 +346,7 @@ public class BackplaneController {
                         whereClause.append(" and ").append(BackplaneMessage.Field.STICKY.getFieldName()).append("='").append(sticky).append("'");
                     }
 
-                    List<BackplaneMessage> messages = simpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString(), true);
+                    List<BackplaneMessage> messages = superSimpleDb.retrieveWhere(bpConfig.getMessagesTableName(), BackplaneMessage.class, whereClause.toString(), true);
 
                     List<Map<String,Object>> frames = new ArrayList<Map<String, Object>>();
 

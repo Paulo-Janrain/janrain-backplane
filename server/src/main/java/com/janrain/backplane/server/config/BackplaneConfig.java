@@ -95,7 +95,7 @@ public class BackplaneConfig {
      * @throws ApplicationException if no matching entity configuration is found
      */
     public <T extends AbstractMessage> T getConfig(String entityName, Class<T> entityType) throws SimpleDBException {
-        T config = simpleDb.retrieve(getTableNameForType(entityType), entityType, entityName);
+        T config = superSimpleDb.retrieve(getTableNameForType(entityType), entityType, entityName);
         if (config == null) {
             throw new ApplicationException("Error looking up " + entityType.getSimpleName() + " " + entityName);
         }
@@ -245,7 +245,23 @@ public class BackplaneConfig {
 
     @PreDestroy
     private void cleanup() {
-        this.cleanup.shutdownNow();
+        try {
+            this.cleanup.shutdown();
+            if (this.cleanup.awaitTermination(10, TimeUnit.SECONDS)) {
+                logger.info("Background thread shutdown properly");
+            } else {
+                this.cleanup.shutdownNow();
+                if (!this.cleanup.awaitTermination(10, TimeUnit.SECONDS)) {
+                    logger.error("Background thread did not terminate");
+                }
+            }
+            Metrics.defaultRegistry().threadPools().shutdownThreadPools();
+        } catch (InterruptedException e) {
+            logger.error("cleanup() threw an exception", e);
+            this.cleanup.shutdownNow();
+            Thread.currentThread().interrupt();
+
+        }
     }
 
     private void compileMetrics() {
@@ -255,9 +271,9 @@ public class BackplaneConfig {
 
             logger.debug("Storing metrics for instance " + MetricsAccumulator.getInstanceUuid());
 
-            MetricMessage oldMetric = simpleDb.retrieveAndDelete(getMetricsTableName(), MetricMessage.class, metric.getIdValue());
+            MetricMessage oldMetric = superSimpleDb.retrieveAndDelete(getMetricsTableName(), MetricMessage.class, metric.getIdValue());
 
-            simpleDb.store(getMetricsTableName(), MetricMessage.class, metric, true);
+            superSimpleDb.store(getMetricsTableName(), MetricMessage.class, metric, true);
 
         } catch (Exception e) {
             logger.error("Error compiling metrics " + e.getMessage(), e);
@@ -269,15 +285,15 @@ public class BackplaneConfig {
         try {
             logger.info("Backplane message cleanup task started.");
             String messagesTable = getMessagesTableName();
-            for(BusConfig busConfig : simpleDb.retrieve(getTableNameForType(BusConfig.class), BusConfig.class)) {
+            for(BusConfig busConfig : superSimpleDb.retrieve(getTableNameForType(BusConfig.class), BusConfig.class)) {
                 try {
                     // non-sticky
-                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), false, busConfig.get(RETENTION_TIME_SECONDS)));
+                    superSimpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), false, busConfig.get(RETENTION_TIME_SECONDS)));
                     // sticky
-                    simpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), true, busConfig.get(RETENTION_STICKY_TIME_SECONDS)));
+                    superSimpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), true, busConfig.get(RETENTION_STICKY_TIME_SECONDS)));
 
                     // remove old metrics
-                    simpleDb.deleteWhere(getMetricsTableName(), getExpiredMetricClause());
+                    superSimpleDb.deleteWhere(getMetricsTableName(), getExpiredMetricClause());
                 } catch (SimpleDBException sdbe) {
                     logger.error("Error cleaning up expired messages on bus "  + busConfig.get(BUS_NAME) + ", " + sdbe.getMessage(), sdbe);
                 }
@@ -316,7 +332,7 @@ public class BackplaneConfig {
 
     @Inject
     @SuppressWarnings({"UnusedDeclaration"})
-    private SuperSimpleDB simpleDb;
+    private SuperSimpleDB superSimpleDb;
 
     @Inject
     private MetricsAccumulator metricAccumulator;
@@ -332,7 +348,7 @@ public class BackplaneConfig {
                 result = bpServerConfigCache;
                 if (result == null || result.left == null || result.right == null ||  maxCacheAge == null ||
                     result.right + maxCacheAge < System.currentTimeMillis() ) {
-                    result = new Pair<BpServerConfigMap, Long>(simpleDb.retrieve(getBpServerConfigTableName(), BpServerConfigMap.class, BP_CONFIG_ENTRY_NAME), System.currentTimeMillis());
+                    result = new Pair<BpServerConfigMap, Long>(superSimpleDb.retrieve(getBpServerConfigTableName(), BpServerConfigMap.class, BP_CONFIG_ENTRY_NAME), System.currentTimeMillis());
                     bpServerConfigCache = result;
                 }
             }
@@ -360,7 +376,7 @@ public class BackplaneConfig {
 
     public void checkAuth(String authTable, String user, String password) throws AuthException {
         try {
-            User userEntry = simpleDb.retrieve(authTable, User.class, user);
+            User userEntry = superSimpleDb.retrieve(authTable, User.class, user);
             String authKey = userEntry == null ? null : userEntry.get(User.Field.PWDHASH);
             if ( ! HmacHashUtils.checkHmacHash(password, authKey) ) {
                 throw new AuthException("User " + user + " not authorized in " + authTable);
