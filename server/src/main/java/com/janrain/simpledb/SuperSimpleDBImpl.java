@@ -29,7 +29,7 @@ import java.util.*;
  *
  * @author Johnny Bufu
  */
-@Service(value="superSimpleDB")
+//@Service(value="superSimpleDB")
 @Scope(value="singleton")
 public class SuperSimpleDBImpl implements SuperSimpleDB {
 
@@ -54,7 +54,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
             simpleDB.putAttributes(new PutAttributesRequest(table, data.getName(), asReplacebleAttributes(data, longFields)));
             logger.info("SimpleDB stored " + table + "/" + data.getName());
         } catch (AmazonClientException e) {
-            throw new SimpleDBException(e.getMessage(), e);
+            throw new SimpleDBException("store() threw an exception for domain " + table + ", " + e.getMessage(), e);
         }
     }
 
@@ -193,6 +193,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
     public void drop(String table) throws SimpleDBException {
         try {
             simpleDB.deleteDomain(new DeleteDomainRequest(table));
+            checkedDomains.remove(table);
         } catch (AmazonClientException e) {
             throw new SimpleDBException(e.getMessage(), e);
         }

@@ -125,7 +125,7 @@ public class ProvisioningController {
     private BackplaneConfig bpConfig;
 
     @Inject
-    private SuperSimpleDB simpleDb;
+    private SuperSimpleDB superSimpleDb;
 
     private <T extends AbstractMessage> Map<String, Map<String, String>> doList(Class<T> entityType, List<String> entityNames) {
 
@@ -152,7 +152,7 @@ public class ProvisioningController {
     private <T extends AbstractMessage> Map<String, Map<String, String>> doListAll(Class<T> entityType) {
         Map<String,Map<String,String>> result = new LinkedHashMap<String, Map<String, String>>();
         try {
-            for(T config :  simpleDb.retrieve(bpConfig.getTableNameForType(entityType), entityType)) {
+            for(T config :  superSimpleDb.retrieve(bpConfig.getTableNameForType(entityType), entityType)) {
                 result.put(config.getIdValue(), config);
             }
         } catch (final Exception e) {
@@ -166,7 +166,7 @@ public class ProvisioningController {
         for(String entityName : entityNames) {
             String deleteStatus = BACKPLANE_DELETE_SUCCESS;
             try {
-                simpleDb.delete(bpConfig.getTableNameForType(entityType), entityName);
+                superSimpleDb.delete(bpConfig.getTableNameForType(entityType), entityName);
             } catch (Exception e) {
                 deleteStatus = e.getMessage();
             }
@@ -197,7 +197,7 @@ public class ProvisioningController {
             }
             String updateStatus = BACKPLANE_UPDATE_SUCCESS;
             try {
-                simpleDb.store(bpConfig.getTableNameForType(customerConfigType), customerConfigType, config);
+                superSimpleDb.store(bpConfig.getTableNameForType(customerConfigType), customerConfigType, config);
             } catch (Exception e) {
                 updateStatus = e.getMessage();
             }

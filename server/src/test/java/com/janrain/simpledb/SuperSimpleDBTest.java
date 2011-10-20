@@ -15,7 +15,7 @@ import static org.junit.Assert.assertEquals;
  * @author Johnny Bufu
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations = { "classpath:/spring/app-config.xml", "classpath:/spring/mvc-config.xml" })
+@ContextConfiguration(locations = {"classpath:/spring/app-config.xml", "classpath:/spring/mvc-config.xml"})
 public class SuperSimpleDBTest {
 
     @Test
@@ -50,6 +50,7 @@ public class SuperSimpleDBTest {
 
     @After
     public void tearDown() throws Exception {
+        System.out.println("Tearing down " + TEST_TABLE);
         superSimpleDB.drop(TEST_TABLE);
     }
 

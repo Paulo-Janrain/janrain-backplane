@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE urlrewrite PUBLIC "-//tuckey.org//DTD UrlRewrite 3.0//EN" "http://tuckey.org/res/dtds/urlrewrite3.0.dtd">
+<urlrewrite default-match-type="wildcard">
+	<rule>
+		<from>/static/**</from>
+		<to>/static/$1</to>
+	</rule>
+	<rule>
+		<from>/styles/**</from>
+		<to>/styles/$1</to>
+	</rule>
+	<rule>
+		<from>/backplane.js</from>
+		<to>/static/backplane.js</to>
+	</rule>
+    <rule>
+        <from>/v1/**</from>
+        <to>/app/$1</to>
+    </rule>
+    <rule>
+        <from>/v1.1/**</from>
+        <to>/app/$1</to>
+    </rule>
+    <rule>
+        <from>/v1.2/**</from>
+        <to>/app/$1</to>
+    </rule>
+
+	<rule>
+		<from>/**</from>
+		<to>/app/$1</to>
+	</rule>
+
+	<outbound-rule>
+		<from>/app/**</from>
+		<to>/$1</to>
+	</outbound-rule>
+</urlrewrite>

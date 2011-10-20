@@ -1,0 +1,448 @@
+<h1>Backplane README</h1>
+
+<p>The Backplane Server implements the <a href="https://sites.google.com/site/backplanespec/documentation/backplanespecification1-1#backplane.server.api">backplane-core-v1.1</a> and <a href="http://groups.google.com/group/backplane-working-group/browse_thread/thread/d545b2d0011820de">backplane-core-1.2-draft01</a> specifications, with the configuration and deployment specifics detailed in this document.</p>
+
+<p>The implementation is backwards-compatible with <a href="http://www.backplaneworkinggroup.org/documentation/backplanespecification#backplane.server.api">v1</a> of the protocol.</p>
+
+<p>The deployment environment is Amazon AWS and the storage engine used is SimpleDB.</p>
+
+<h2>Configuration</h2>
+
+<p>Each Backplane Server logical instance is identified by its backplane-instance name.
+SimpleDB is used for keeping Backplane Server's configuration data.</p>
+
+<p>The Backplane Server learns its bootstrap configuration parameters from the following environment variables:</p>
+
+<ul>
+<li><code>PARAM1</code>: The logical Backplane instance ID. Used to identify configuration data sets within SimpleDB and allow multiple (AWS) instances to be part of the same logical Backplane Server deployment.</li>
+<li><code>AWS_ACCESS_KEY_ID</code>: Key ID for accessing SimpleDB.</li>
+<li><code>AWS_SECRET_KEY</code>: Secret key for accessing SimpleDB.</li>
+<li><code>PARAM2</code>: Reporting domain for emails sent from Backplane server via log4j's SMTPAppender (e.g., "samplebackplane.com").  Emails have a complete origin format of <code>${PARAM1}@${PARAM2}</code>.</li>
+<li><code>PARAM3</code>: Destination for log4j emails (e.g., "backplane-email@homedomain.com").</li>
+</ul>
+
+<h2>Build Server</h2>
+
+<p>This project requires the <a href="http://maven.apache.org/guides/getting-started/maven-in-five-minutes.html">Maven</a> build tool.</p>
+
+<p><code>mvn package -DskipTests=true</code></p>
+
+<p>To process the tests, you must have created an Amazon SimpleDB instance.  Use the following modification to the Maven build command (be sure to add your parameters):</p>
+
+<p><code>mvn package -DargLine="-DPARAM1=instanceid -DPARAM2=sample.com -DPARAM3=quiet@sample.com -DAWS_ACCESS_KEY_ID=key -DAWS_SECRET_KEY=secret"</code></p>
+
+<p>Maven will create a WAR file for deployment in the server/target directory.</p>
+
+<h2>Administrator Authentication</h2>
+
+<p>Administrators can access the Bus Provisioning API and update Bus Configuration data. Administrator credentials are kept in the <code>&lt;backplane-instance&gt;_Admin</code> table:</p>
+
+<ul>
+<li><code>USER</code>: admin username</li>
+<li><code>PWDHASH</code>: admin password (hash)</li>
+</ul>
+
+<p>Backplane administrators are provisioned manually.  To generate a password hash, see the HmacHashUtils class and its main() method.</p>
+
+<h2>Bus Configuration</h2>
+
+<p>A (customer) bus is defined by the following Bus Configuration data, kept in the <code>&lt;backplane-instance&gt;_BusConfig</code> table:</p>
+
+<ul>
+<li><code>BUS_NAME</code>: bus name</li>
+<li><code>RETENTION_TIME_SECONDS</code>: message retention time (seconds)</li>
+<li><code>RETENTION_STICKY_TIME_SECONDS</code>: message retention time for sticky messages (seconds)</li>
+<li><code>&lt;backplane_user&gt;:</code> comma-separated list of permissions</li>
+</ul>
+
+<h3>Backplane Bus Access Accounts</h3>
+
+<p>Backplane user accounts are kept in the <code>&lt;backplane-instance&gt;_User</code> table:</p>
+
+<ul>
+<li><code>USER</code>: backplane username</li>
+<li><code>PWDHASH</code>: backplane password (hash)</li>
+</ul>
+
+<h3>Backplane Bus Permissions</h3>
+
+<p>The initial set of permissions is:</p>
+
+<ul>
+<li><code>GETALL</code>: allows access to the "Get All" API endpoint</li>
+<li><code>POST</code>: allows posting of (common) messages to the bus</li>
+<li><code>IDENTITY</code>: allows posting of identity specific messages to the bus</li>
+</ul>
+
+<p>Note: An access decision for the "Post" operation requires the message type (from which the required permission can be determined), in addition to the endpoint (bus and channel) and credentials required for the "Get All" operation.</p>
+
+<h2>Endpoints</h2>
+
+<p>All endpoints are available at paths starting with all of the following prefixes:</p>
+
+<ul>
+<li>/v1/</li>
+<li>/v1.1/</li>
+<li>/v1.2/</li>
+</ul>
+
+<h2>Backplane Message Store</h2>
+
+<p>Backplane message frames are stored in SimpleDB under the <code>&lt;backplane-instance&gt;_messages</code> table:</p>
+
+<ul>
+<li>message_id</li>
+<li>channel_name</li>
+<li>message_payload</li>
+</ul>
+
+<h2>Backplane API</h2>
+
+<p>The Backplane Server exposes the following Backplane API endpoints, as defined by the [backplane-core] specification in <a href="http://www.google.com/url?q=http%3A%2F%2Fwww.backplaneworkinggroup.org%2Fdocumentation%2Fbackplanespecification%23backplane.server.api&amp;sa=D&amp;sntz=1&amp;usg=AFrqEze0Sq9K21KxH_dC7ekUpFCLNGXZaQ">Section 4.4</a>.</p>
+
+<h3>Get All (v1.1)</h3>
+
+<ul>
+<li>Endpoint:  <code>/v1.1/bus/&lt;BUS_NAME&gt;</code></li>
+<li>Security: HTTPS GET, HTTP-Basic authentication</li>
+<li>Request parameters: since (optional)</li>
+<li>Response body: list of backplane frames</li>
+</ul>
+
+<h3>Get All (v1.2)</h3>
+
+<ul>
+<li>Endpoint:  <code>/v1.2/bus/&lt;BUS_NAME&gt;</code></li>
+<li>Security: HTTPS GET, HTTP-Basic authentication</li>
+<li>Request parameters: since (optional)</li>
+<li><strong>Request parameters: sticky (optional)</strong></li>
+<li>Response body: list of backplane frames</li>
+</ul>
+
+<h3>Get Channel (v1.1)</h3>
+
+<ul>
+<li>Endpoint:  <code>/v1.1/bus/&lt;BUS_NAME&gt;/channel/&lt;CHANNEL_NAME&gt;</code></li>
+<li>Security: HTTPS GET, no authentication</li>
+<li>Request parameters: since (optional)</li>
+<li>Response body: list of backplane frames</li>
+</ul>
+
+<h3>Get Channel (v1.2)</h3>
+
+<ul>
+<li>Endpoint:  <code>/v1.2/bus/&lt;BUS_NAME&gt;/channel/&lt;CHANNEL_NAME&gt;</code></li>
+<li>Security: HTTPS GET, no authentication</li>
+<li>Request parameters: since (optional)</li>
+<li><strong>Request parameters: sticky (optional)</strong></li>
+<li>Response body: list of backplane frames</li>
+</ul>
+
+<h3>Post</h3>
+
+<ul>
+<li>Endpoint:  <code>/v1.1/bus/&lt;BUS_NAME&gt;/channel/&lt;CHANNEL_NAME&gt;</code></li>
+<li>Security: HTTPS POST, HTTP-Basic authentication</li>
+<li>Request body: list of backplane messages</li>
+<li>Response body: empty on success or if the post exceeds the maximum number of message allowed (default of 100 per channel) an error is returned:</li>
+</ul>
+
+<p><code>json
+{"ERR_MSG":"Message limit exceeded for this channel"}
+</code></p>
+
+<p>This value may be overridden by placing an entry in the <code>&lt;backplane-instance&gt;_bpserverconfig</code> table called <code>DEFAULT_MESSAGES_MAX</code> with an appropriate value.</p>
+
+<h2>User Provisioning API</h2>
+
+<p>Create or Update User Entry</p>
+
+<p>Example HTTP API request:</p>
+
+<p>POST <code>/v1.1/provision/user/update</code>
+Host: backplanesample.com
+Content-Type: application/json</p>
+
+<p><code>json
+{
+  "admin": "admin",
+  "secret": "admin",
+  "configs": [
+    {
+        "USER": "user1",
+        "PWDHASH": "user1"
+    },
+    {
+        "USER": "user2",
+        "PWDHASH": "user2"
+    }
+  ]
+}
+</code></p>
+
+<p>Example curl command for the above HTTP API request:</p>
+
+<p><code>curl -i --data @json_data_file.txt -H "Content-type: application/json" http://backplanesample.com/v1.1/provision/user/update</code></p>
+
+<h3>List All Users</h3>
+
+<p>Example HTTP API request:</p>
+
+<p>POST <code>/v1.1/provision/user/list</code>
+Host: backplanesample.com
+Content-Type: application/json</p>
+
+<p><code>json
+{
+  "admin": "admin",
+  "secret": "admin",
+  "entities": []
+}
+</code></p>
+
+<p>Example curl command for the above HTTP API request:</p>
+
+<p><code>curl -i --data @json_data_file.txt -H "Content-type: application/json" http://backplanesample.com/v1.1/provision/user/list</code></p>
+
+<h3>Delete User(s)</h3>
+
+<p>Example HTTP API request:</p>
+
+<p>POST <code>/v1.1/provision/user/delete</code>
+Host: backplanesample.com
+<code>Content-Type: application/json</code></p>
+
+<p><code>json
+{
+  "admin": "admin",
+  "secret": "admin",
+  "entities": [ "user1", "user2" ]
+}
+</code></p>
+
+<p>Example curl command for the above HTTP API request:</p>
+
+<p><code>curl -i --data @json_data_file.txt -H "Content-type: application/json" http://backplanesample.com/v1.1/provision/user/delete</code></p>
+
+<h2>Bus Provisioning API</h2>
+
+<p>All Bus Provisioning API calls are only available over HTTPS and are authenticated against the <code>&lt;backplane-instance&gt;_Admin</code> table.</p>
+
+<h3>List Buses</h3>
+
+<p>Returns a list of Bus Configuration data sets.</p>
+
+<p>Request:</p>
+
+<ul>
+<li>endpoint: <code>/v1.1/provision/bus/list</code></li>
+<li>HTTP method: POST</li>
+<li>all entries are required</li>
+<li>the value for the entities entry can be empty, in which case all Backplane Bus configurations are returned</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "admin": "&lt;adminUsername&gt;",
+    "secret": "&lt;adminPassword&gt;",
+    "entities": [ "customer1.com", "customer2.net" ]
+}
+</code></p>
+
+<p>Response:</p>
+
+<ul>
+<li>status 200 for requests with valid format that were processed successfully</li>
+<li>requested bus configurations that were not found will result in a <code>"ERR_MSG": "NOT_FOUND"</code> entry</li>
+<li>requested bus configurations that encountered retrieval errors will result in a <code>"ERR_MSG": "&lt;error_message&gt;"</code> entry</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "customer1":
+        {
+            "BUS_NAME": "customer1",
+            "RETENTION_TIME_SECONDS": "600",
+            "&lt;username1&gt;: "&lt;permission1&gt;,&lt;permission2&gt;,...",
+            "&lt;username2&gt;: "&lt;permission3&gt;,&lt;permission4&gt;,...",
+            ...
+        },
+...
+}
+</code></p>
+
+<p><code>curl -i --data @json_data_file.txt -H "Content-type: application/json" http://backplanesample.com/v1.1/provision/bus/list</code></p>
+
+<h3>Delete Bus</h3>
+
+<p>Removes the specified bus configuration(s).</p>
+
+<p>Request:</p>
+
+<ul>
+<li>endpoint: <code>/v1.1/provision/bus/delete</code></li>
+<li>HTTP method: POST</li>
+<li>all entries are required</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "admin": "&lt;adminUsername&gt;",
+    "secret": "&lt;adminPassword&gt;",
+    "entities": [ "customer1.com", "customer2.net" ]
+}
+</code></p>
+
+<p>Response:</p>
+
+<ul>
+<li>status 200 for requests with valid format that were processed successfully</li>
+<li>an entry is returned for each bus configuration with the status of the delete operation - either "<code>BACKPLANE_DELETE_SUCCESS</code>" or an error message if the deletion was not completed successfully</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "customer1.com": "BACKPLANE_DELETE_SUCCESS",
+    "customer2.net": "&lt;delete error message&gt;"
+}
+</code></p>
+
+<p><code>curl -i --data @json_data_file.txt -H "Content-type: application/json" http://backplanesample.com/v1.1/provision/bus/delete</code></p>
+
+<p><em>NOTE:</em> Deleting a bus configuration removes all Privileged Access Level defined for it; it does <em>NOT</em> remove any existing Backplane Messages from any of its channels. They will still be available for retrieval through the "Get Channel Messages" Backplane operation until they expire.</p>
+
+<h3>Update Buses</h3>
+
+<p>Updates Bus configuration data. If a bus in the provided list does not exist, it is added to the Bus Configuration table.</p>
+
+<p>Request (v1.1):</p>
+
+<ul>
+<li>endpoint: <code>/v1/provision/bus/update</code></li>
+<li>HTTP method: POST</li>
+<li>all entries are required</li>
+<li>provided Bus configurations must be in the valid format for the specified endpoint type</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "admin": "&lt;adminUsername&gt;",
+    "secret": "&lt;adminPassword&gt;",
+    "configs": [
+        {
+            "BUS_NAME": "customer1",
+            "RETENTION_TIME_SECONDS": "600",
+            "&lt;username1&gt;: "&lt;permission1&gt;,&lt;permission2&gt;,...",
+            "&lt;username2&gt;: "&lt;permission3&gt;,&lt;permission4&gt;,...",
+            ...
+            },
+            ...
+    ]
+}
+</code></p>
+
+<p>Request (v1.2):</p>
+
+<ul>
+<li>endpoint: <code>/v1.2/provision/bus/update</code></li>
+<li>HTTP method: POST</li>
+<li>all entries are required</li>
+<li>provided Bus configurations must be in the valid format for the specified endpoint type</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "admin": "&lt;adminUsername&gt;",
+    "secret": "&lt;adminPassword&gt;",
+    "configs": [
+        {
+            "BUS_NAME": "customer1",
+            "RETENTION_TIME_SECONDS": "600",
+            *"RETENTION_STICKY_TIME_SECONDS": "28800"*,
+            "&lt;username1&gt;: "&lt;permission1&gt;,&lt;permission2&gt;,...",
+            "&lt;username2&gt;: "&lt;permission3&gt;,&lt;permission4&gt;,...",
+            ...
+            },
+            ...
+    ]
+}
+</code></p>
+
+<p>Response / success:</p>
+
+<ul>
+<li>status 200 for requests with valid format that were processed successfully</li>
+<li>an entry is returned for each bus configuration with the status of the update operation - either <code>"BACKPLANE_UPDATE_SUCCESS"</code> or an error message if the deletion was not completed successfully.</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "customer1.com": "BACKPLANE_UPDATE_SUCCESS",
+    "customer2.net": "&lt;update error message&gt;"
+}
+</code></p>
+
+<h3>Retrieve Metrics</h3>
+
+<p>Backplane server publishes usages statistics.  Interesting data points include the number of channel gets, posts and how long it takes the server to retrieve a get payload.  The output will include one "instance" entry for each running Backplane server on a common SimpleDB instance (<code>PARAM1</code>).  Each server publishes its accumulated metrics every few minutes to SimpleDB in a maximum of one entry per running instance.  The server handling a metric request will retrieve all entries and compile them into one response.</p>
+
+<p>If a server is restarted, it will create a new instance ID and begin reporting a fresh set of metrics.  The previous "orphaned" metric entry in SimpleDB for this server will be removed automatically.</p>
+
+<p>Request:</p>
+
+<ul>
+<li>endpoint: <code>/v1/metrics/dump</code></li>
+<li>HTTP method: POST</li>
+<li>all entries are required</li>
+<li>body format:</li>
+</ul>
+
+<p><code>json
+{
+    "user": "metrics",
+    "secret": "someSecretKey"
+}
+</code></p>
+
+<p>Response success:</p>
+
+<ul>
+<li>status 200 for requests with valid format that were processed successfully</li>
+<li>body format (sample data, with metric details removed for brevity)</li>
+</ul>
+
+<p><code>json
+[
+   "instance":{
+      "id":"6e3d41e0-2206-4c1e-93d2-42ed0d21e377",
+      "time_collected":"2011-10-17T22:42:09.177Z",
+      "metrics":{
+      ...
+      }
+   }
+]
+</code></p>
+
+<h3>Error Responses</h3>
+
+<p>status 401 Unauthorized - API authentication failure
+status 400 Bad Request - invalid request format / syntax</p>
+
+<p>Each error response body will contain an error message in the following format:</p>
+
+<p><code>json
+{
+    "ERR_MSG": "&lt;message&gt;"
+}
+</code></p>
+
+<h2>References</h2>
+
+<p><a href="http://www.google.com/url?q=http%3A%2F%2Fwww.backplaneworkinggroup.org%2Fdocumentation%2Fbackplanespecification&amp;sa=D&amp;sntz=1&amp;usg=AFrqEzfpOgrG-qvTEDKLQ-YWEag-Hg4-9g">backplane-core</a>: Backplane v1 core specification</p>

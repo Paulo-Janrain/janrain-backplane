@@ -15,7 +15,6 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   --%>
-
 <html>
 <head>
 	<META http-equiv="Content-Type" content="text/html;charset=UTF-8">
