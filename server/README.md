@@ -1,7 +1,7 @@
 Backplane README
 ================
 
-The Backplane Server implements the [backplane-core-v1.1](https://sites.google.com/site/backplanespec/documentation/backplanespecification1-1#backplane.server.api) and [backplane-core-1.2-draft01](http://groups.google.com/group/backplane-working-group/browse_thread/thread/d545b2d0011820de) specifications, with the configuration and deployment specifics detailed in this document.
+The Backplane Server implements the [backplane-core-v1.1](https://sites.google.com/site/backplanespec/documentation/backplanespecification1-1#backplane.server.api) and [backplane-core-1.2](https://sites.google.com/site/backplanespec/documentation/backplane1-2) specifications, with the configuration and deployment specifics detailed in this document.
 
 The implementation is backwards-compatible with [v1](http://www.backplaneworkinggroup.org/documentation/backplanespecification#backplane.server.api) of the protocol.
 
@@ -413,12 +413,5 @@ Each error response body will contain an error message in the following format:
     "ERR_MSG": "<message>"
 }
 ```
-
-References
-----------
-
-[backplane-core](http://www.google.com/url?q=http%3A%2F%2Fwww.backplaneworkinggroup.org%2Fdocumentation%2Fbackplanespecification&sa=D&sntz=1&usg=AFrqEzfpOgrG-qvTEDKLQ-YWEag-Hg4-9g): Backplane v1 core specification
-
-
 
 
