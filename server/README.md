@@ -341,7 +341,7 @@ Request (v1.2):
         {
             "BUS_NAME": "customer1",
             "RETENTION_TIME_SECONDS": "600",
-            *"RETENTION_STICKY_TIME_SECONDS": "28800"*,
+            "RETENTION_STICKY_TIME_SECONDS": "28800",
             "<username1>: "<permission1>,<permission2>,...",
             "<username2>: "<permission3>,<permission4>,...",
             ...
