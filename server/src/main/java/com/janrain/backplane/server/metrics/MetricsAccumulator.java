@@ -24,6 +24,7 @@ import com.yammer.metrics.core.*;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -31,11 +32,12 @@ import java.lang.management.MemoryUsage;
 import java.util.*;
 
 /**
- * Maintains usage metrics in memory.
+ * Retrieves metrics stored in SimpleDB
  *
  * @author Tom Raney
  */
 
+@Service(value="metricAccumulator")
 @Scope(value = "singleton")
 public class MetricsAccumulator {
 
