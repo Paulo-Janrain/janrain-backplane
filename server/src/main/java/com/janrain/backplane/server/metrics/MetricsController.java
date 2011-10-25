@@ -82,7 +82,7 @@ public class MetricsController {
             if (count++ > 0) {
                 sb.append(",");
             }
-            sb.append("\"instance\":{");
+            sb.append("{");
             sb.append("\"id\":\"" + metric.getIdValue() + "\",");
             sb.append("\"time_collected\":\"" + metric.get(MetricMessage.Field.TIME) + "\",");
             sb.append("\"metrics\":" + metric.get(MetricMessage.Field.PAYLOAD));
