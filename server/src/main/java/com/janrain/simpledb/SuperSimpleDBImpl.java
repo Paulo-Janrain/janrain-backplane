@@ -241,7 +241,7 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
      *
      * @param table
      */
-    private void checkDomain(String table) {
+    public void checkDomain(String table) {
         if (checkedDomains.contains(table)) return;
 
         ListDomainsRequest listRequest = new ListDomainsRequest();

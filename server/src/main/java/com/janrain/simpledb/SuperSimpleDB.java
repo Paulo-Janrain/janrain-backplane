@@ -24,6 +24,14 @@ public interface SuperSimpleDB {
     public void create(String table) throws SimpleDBException;
 
     /**
+     * Check if the domain (table) exists, and initialize it only if doesn't (since creating it is potentially expensive)
+     *
+     * @param table
+     */
+
+    public void checkDomain(String table);
+
+    /**
      * Stores the provided entry under the specified table/domain (which is created if it doesn't exist).
      */
     public <T extends NamedMap> void store(String table, Class<T> type, T data) throws SimpleDBException;
