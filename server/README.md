@@ -42,7 +42,12 @@ Administrators can access the Bus Provisioning API and update Bus Configuration 
 * `USER`: admin username
 * `PWDHASH`: admin password (hash)
 
-Backplane administrators are provisioned manually.  To generate a password hash, see the HmacHashUtils class and its main() method.
+To retrieve the generated metrics, you must add the `<backplane-instance>__bpMetricAuth` table:
+
+* `USER`: metrics username
+* `PWDHASH`: metrics password (hash)
+
+These Backplane admin users are provisioned manually.  To generate a password hash, see the HmacHashUtils class and its main() method.
 
 Bus Configuration
 -----------------
@@ -391,9 +396,15 @@ Response success:
 
 ```json
 [
-   "instance":{
+   {
       "id":"6e3d41e0-2206-4c1e-93d2-42ed0d21e377",
       "time_collected":"2011-10-17T22:42:09.177Z",
+      "metrics":{
+      ...
+      }
+   },
+      "id":"blah",
+      "time_collected":"blah",
       "metrics":{
       ...
       }

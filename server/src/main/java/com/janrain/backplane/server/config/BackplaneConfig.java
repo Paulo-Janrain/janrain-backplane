@@ -219,6 +219,9 @@ public class BackplaneConfig {
         cleanupTask.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
+
+                compileMetrics();
+
                 try {
                     getMessagesTime.time(new Callable<Object>() {
                         @Override
@@ -231,10 +234,10 @@ public class BackplaneConfig {
                     logger.error("Error while cleaning up expired messages, " + e.getMessage(), e);
                 }
 
-                compileMetrics();
             }
 
         }, cleanupIntervalMinutes, cleanupIntervalMinutes, TimeUnit.MINUTES);
+
         return cleanupTask;
     }
 
@@ -270,6 +273,9 @@ public class BackplaneConfig {
             MetricMessage metric = metricAccumulator.prepareSummary();
 
             logger.debug("Storing metrics for instance " + MetricsAccumulator.getInstanceUuid());
+
+            // Create the _metrics table if it doesn't already exist.  This is a light-weight call.
+            superSimpleDb.checkDomain(getMetricsTableName());
 
             MetricMessage oldMetric = superSimpleDb.retrieveAndDelete(getMetricsTableName(), MetricMessage.class, metric.getIdValue());
 
