@@ -40,6 +40,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -60,8 +61,11 @@ public class BackplaneController {
 
     // - PUBLIC
 
-    @RequestMapping(value = "/", method = RequestMethod.GET)
-    public ModelAndView greetings() {
+    @RequestMapping(value = "/", method = { RequestMethod.GET, RequestMethod.HEAD })
+    public ModelAndView greetings(HttpServletRequest request, HttpServletResponse response) {
+        if (RequestMethod.HEAD.toString().equals(request.getMethod())) {
+            response.setContentLength(0);
+        }
         return new ModelAndView("welcome");
     }
 
