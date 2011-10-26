@@ -292,12 +292,18 @@ public class BackplaneConfig {
                     // sticky
                     superSimpleDb.deleteWhere(messagesTable, getExpiredMessagesClause(busConfig.get(BUS_NAME), true, busConfig.get(RETENTION_STICKY_TIME_SECONDS)));
 
-                    // remove old metrics
-                    superSimpleDb.deleteWhere(getMetricsTableName(), getExpiredMetricClause());
                 } catch (SimpleDBException sdbe) {
                     logger.error("Error cleaning up expired messages on bus "  + busConfig.get(BUS_NAME) + ", " + sdbe.getMessage(), sdbe);
                 }
             }
+
+            try {
+                // remove old metrics
+                superSimpleDb.deleteWhere(getMetricsTableName(), getExpiredMetricClause());
+            } catch (SimpleDBException sdbe) {
+                logger.error("Error while removing expired metrics, " + sdbe.getMessage(), sdbe);
+            }
+
         } catch (Exception e) {
             // catch-all, else cleanup thread stops
             logger.error("Backplane messages cleanup task error: " + e.getMessage(), e);
