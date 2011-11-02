@@ -199,6 +199,29 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
         }
     }
 
+    @Override
+    public void checkDomain(String table) {
+        if (checkedDomains.contains(table)) return;
+
+        ListDomainsRequest listRequest = new ListDomainsRequest();
+        ListDomainsResult domains;
+        String nextToken;
+        do {
+            domains = simpleDB.listDomains(listRequest);
+            if (domains.getDomainNames().contains(table)) {
+                checkedDomains.add(table);
+                return;
+            }
+            nextToken = domains.getNextToken();
+            listRequest.setNextToken(nextToken);
+
+        } while (nextToken != null);
+
+        logger.info("Creating table: " + table);
+        simpleDB.createDomain(new CreateDomainRequest(table));
+        checkedDomains.add(table);
+    }
+
     // - PACKAGE
 
     public SuperSimpleDBImpl(AmazonSimpleDB simpleDB) {
@@ -235,33 +258,6 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
 	 */
 	@SuppressWarnings({"UnusedDeclaration"})
     private SuperSimpleDBImpl() { }
-
-    /**
-     * Check if the domain (table) exists, and initialize it only if doesn't (since creating it is potentially expensive)
-     *
-     * @param table
-     */
-    public void checkDomain(String table) {
-        if (checkedDomains.contains(table)) return;
-
-        ListDomainsRequest listRequest = new ListDomainsRequest();
-        ListDomainsResult domains;
-        String nextToken;
-        do {
-            domains = simpleDB.listDomains(listRequest);
-            if (domains.getDomainNames().contains(table)) {
-                checkedDomains.add(table);
-                return;
-            }
-            nextToken = domains.getNextToken();
-            listRequest.setNextToken(nextToken);
-
-        } while (nextToken != null);
-
-        logger.info("Creating table: " + table);
-        simpleDB.createDomain(new CreateDomainRequest(table));
-        checkedDomains.add(table);
-    }
 
     private <T extends NamedMap> List<ReplaceableAttribute> asReplacebleAttributes(T data, boolean longFields) {
         List<ReplaceableAttribute> attrs = new ArrayList<ReplaceableAttribute>();
