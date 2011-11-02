@@ -1,4 +1,4 @@
-package coim.janrain.util;
+package com.janrain.util;
 
 import com.janrain.util.Utf8StringUtils;
 import org.apache.commons.lang.RandomStringUtils;
