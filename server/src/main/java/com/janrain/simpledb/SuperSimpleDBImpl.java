@@ -10,7 +10,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.context.annotation.Scope;
-import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
 import java.nio.charset.Charset;
@@ -399,11 +398,19 @@ public class SuperSimpleDBImpl implements SuperSimpleDB {
                 current = new ArrayList<DeletableItem>();
                 result.add(current);
             }
-            current.add(new DeletableItem(item.getName(), item.getAttributes()));
+            current.add(new DeletableItem(item.getName(), decodeAttributes(item.getAttributes())));
             if(current.size() >= BATCH_DELETE_LIMIT) {
                 //noinspection AssignmentToNull
                 current = null;
             }
+        }
+        return result;
+    }
+
+    private List<Attribute> decodeAttributes(List<Attribute> attributes) {
+        List<Attribute> result = new ArrayList<Attribute>();
+        for (Attribute a : attributes) {
+            result.add(new Attribute(decodeAttributeString(a.getName(), a.getAlternateNameEncoding()), decodeAttributeString(a.getValue(), a.getAlternateValueEncoding())));
         }
         return result;
     }
