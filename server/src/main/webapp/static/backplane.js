@@ -23,6 +23,7 @@ window.Backplane = window.Backplane || (function() {
       })();
     }
   };
+  BP.version = "1.2.0";
   BP.channelByBus = {};
   BP.config = {};
   BP.initialized = false;
@@ -49,6 +50,7 @@ window.Backplane = window.Backplane || (function() {
  *   Possible hash keys:
  *     serverBaseURL (required) - Base URL of Backplane Server
  *     busName (required) - Customer's backplane bus name
+ *     channelExpires (optional) - set backplane-channel cookie life span
  */
 Backplane.init = function(config) {
         config = config || {};
@@ -59,6 +61,12 @@ Backplane.init = function(config) {
         this.config.serverBaseURL = this.normalizeURL(config.serverBaseURL);
 
         this.channelByBus = this.getCookieChannels();
+
+        if (typeof this.config.channelExpires == "undefined") {
+            var d = new Date();
+            d.setFullYear(d.getFullYear() + 5);
+            this.config.channelExpires = d.toGMTString();
+        }
 
         if (this.getChannelName()) {
                 this.finishInit(false);
@@ -144,9 +152,9 @@ Backplane.expectMessagesWithin = function(interval, types) {
 Backplane.finishInit = function (channelName) {
         if (channelName) {
                 this.channelByBus[this.config.busName] = channelName;
-                this.setCookieChannels();
         }
 
+        this.setCookieChannels();
         this.config.channelName = this.getChannelName();
         this.config.channelID = this.generateChannelID();
         this.onInit();
@@ -186,9 +194,8 @@ Backplane.setCookieChannels = function() {
                         parts.push(encodeURIComponent(i) + ":" + encodeURIComponent(this.channelByBus[i]));
                 }
         }
-        var d = new Date();
-        d.setFullYear(d.getFullYear() + 5);
-        document.cookie = "backplane-channel=" + parts.join("|") + ";expires=" + d.toGMTString() + ";path=/";
+
+        document.cookie = "backplane-channel=" + parts.join("|") + ";expires=" + this.config.channelExpires + ";path=/";
 };
 
 Backplane.resetCookieChannel = function() {
