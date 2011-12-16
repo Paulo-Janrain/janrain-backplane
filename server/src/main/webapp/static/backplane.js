@@ -27,6 +27,7 @@ window.Backplane = window.Backplane || (function() {
   BP.channelByBus = {};
   BP.config = {};
   BP.initialized = false;
+  BP.firstFrameReceived = false;
   BP.subscribers = {};
   BP.awaiting = {
     "since": 0,
@@ -298,6 +299,7 @@ Backplane.response = function(messages) {
                 }
                 this.awaiting.queue = queue;
         }
+        this.firstFrameReceived = true;
         this.request();
 };
 
