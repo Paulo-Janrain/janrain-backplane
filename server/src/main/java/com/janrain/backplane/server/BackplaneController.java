@@ -152,6 +152,7 @@ public class BackplaneController {
                 "select count(*) from `" + bpConfig.getMessagesTableName() + "` where bus='" + bus + "' and channel_name='" + channel + "'");
 
         if (count >= bpConfig.getDefaultMaxMessageLimit()) {
+            logger.error("Message limit of " + bpConfig.getDefaultMaxMessageLimit() + " exceeded for channel: " + channel + " on bus: " + bus);
             throw new BackplaneServerException("Message limit exceeded for this channel");
         }
 
