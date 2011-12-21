@@ -30,7 +30,7 @@ window.Backplane = window.Backplane || (function() {
     BP.firstFrameReceived = false;
     BP.cachedMessages = {};
     BP.cachedMessagesIndex = [];
-    BP.cacheMax = 5;
+    BP.cacheMax = 0;
     BP.subscribers = {};
     BP.awaiting = {
         "since": 0,
