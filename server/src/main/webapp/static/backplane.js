@@ -128,7 +128,7 @@ Backplane.getChannelID = function() {
  * to receive backplane messages of any of the specified types
  *
  * @param {Array} List of expected backplane message types
- */                                                                     /
+ */
 Backplane.expectMessages = function(types) {
     this.expectMessagesWithin(60, types);
 };

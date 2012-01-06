@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-function initFunction(messages) {
+Backplane.identityServices = {};
+
+Backplane.identityServices.init = function(messages) {
+
 
     var replayObjects = {};
     for (var i = 0; i < messages.length; i++) {
