@@ -34,6 +34,8 @@ import org.springframework.context.annotation.Scope;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.inject.Inject;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -144,17 +146,16 @@ public class BackplaneConfig {
         this.bpInstanceId = instanceId;
     }
 
-    static String getAwsEnv(String envParamName) {
-        String result = System.getenv(envParamName);
-        if (StringUtils.isBlank(result)) {
-            throw new RuntimeException("Required environment configuration missing: " + envParamName);
-        }
-        return result;
-    }
+    /**
+     * Check for system property and if that fails, check the container Context
+     * @param propParamName
+     * @return
+     */
 
     static String getAwsProp(String propParamName) {
         String result = System.getProperty(propParamName);
         if (StringUtils.isBlank(result)) {
+            logger.info(propParamName + " value not found in system properties.");
             throw new RuntimeException("Required system property configuration missing: " + propParamName);
         }
         return result;
@@ -167,9 +168,6 @@ public class BackplaneConfig {
     private static final String BUILD_PROPERTIES = "/build.properties";
     private static final String BUILD_VERSION_PROPERTY = "build.version";
     private static final Properties buildProperties = new Properties();
-
-
-    private static final String BP_AWS_INSTANCE_ID = "PARAM1";
     private static final String BP_SERVER_CONFIG_TABLE_SUFFIX = "_bpserverconfig";
     private static final String BP_ADMIN_AUTH_TABLE_SUFFIX = "_Admin";
     private static final String BP_CONFIG_ENTRY_NAME = "bpserverconfig";
@@ -194,7 +192,8 @@ public class BackplaneConfig {
 
     @SuppressWarnings({"UnusedDeclaration"})
     private BackplaneConfig() {
-        this.bpInstanceId = getAwsProp(BP_AWS_INSTANCE_ID);
+        this.bpInstanceId = getAwsProp(InitSystemProps.BP_AWS_INSTANCE_ID);
+        getAwsProp(InitSystemProps.BP_EMAIL_DOMAIN);
         try {
             buildProperties.load(BackplaneConfig.class.getResourceAsStream(BUILD_PROPERTIES));
         } catch (IOException e) {

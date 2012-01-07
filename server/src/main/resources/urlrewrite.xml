@@ -14,6 +14,10 @@
 		<to>/static/backplane.js</to>
 	</rule>
     <rule>
+		<from>/identity-services.js</from>
+		<to>/static/identity-services.js</to>
+	</rule>
+    <rule>
         <from>/v1/**</from>
         <to>/app/$1</to>
     </rule>

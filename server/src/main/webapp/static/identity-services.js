@@ -18,7 +18,6 @@ Backplane.identityServices = {};
 
 Backplane.identityServices.init = function(messages) {
 
-
     var replayObjects = {};
     for (var i = 0; i < messages.length; i++) {
         if (messages[i].message.sticky && messages[i].message.sticky == true) {
