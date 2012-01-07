@@ -147,7 +147,7 @@ public class BackplaneConfig {
     }
 
     /**
-     * Check for system property and if that fails, check the container Context
+     * Load system property
      * @param propParamName
      * @return
      */
@@ -155,7 +155,6 @@ public class BackplaneConfig {
     static String getAwsProp(String propParamName) {
         String result = System.getProperty(propParamName);
         if (StringUtils.isBlank(result)) {
-            logger.info(propParamName + " value not found in system properties.");
             throw new RuntimeException("Required system property configuration missing: " + propParamName);
         }
         return result;
