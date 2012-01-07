@@ -192,7 +192,6 @@ public class BackplaneConfig {
     @SuppressWarnings({"UnusedDeclaration"})
     private BackplaneConfig() {
         this.bpInstanceId = getAwsProp(InitSystemProps.BP_AWS_INSTANCE_ID);
-        getAwsProp(InitSystemProps.BP_EMAIL_DOMAIN);
         try {
             buildProperties.load(BackplaneConfig.class.getResourceAsStream(BUILD_PROPERTIES));
         } catch (IOException e) {
