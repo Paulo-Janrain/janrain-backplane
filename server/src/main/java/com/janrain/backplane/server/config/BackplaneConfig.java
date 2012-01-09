@@ -25,6 +25,7 @@ import com.janrain.message.AbstractNamedMap;
 import com.janrain.message.NamedMap;
 import com.janrain.simpledb.SimpleDBException;
 import com.janrain.simpledb.SuperSimpleDB;
+import com.janrain.util.AwsUtility;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.TimerMetric;
 import org.apache.commons.lang.StringUtils;
@@ -139,6 +140,15 @@ public class BackplaneConfig {
         return buildProperties.getProperty(BUILD_VERSION_PROPERTY);
     }
 
+    /**
+     * Retrieve the server instance id Amazon assigned
+     * @return
+     */
+
+    public static String getEC2InstanceId() {
+        return EC2InstanceId;
+    }
+
     // - PACKAGE
 
 
@@ -179,6 +189,9 @@ public class BackplaneConfig {
     private final String bpInstanceId;
     private ScheduledExecutorService cleanup;
 
+    // Amazon specific instance-id value
+    private static String EC2InstanceId = "n/a";
+
     private final TimerMetric getMessagesTime =
             Metrics.newTimer(BackplaneConfig.class, "cleanup_messages_time", TimeUnit.MILLISECONDS, TimeUnit.MINUTES);
 
@@ -192,6 +205,7 @@ public class BackplaneConfig {
     @SuppressWarnings({"UnusedDeclaration"})
     private BackplaneConfig() {
         this.bpInstanceId = getAwsProp(InitSystemProps.BP_AWS_INSTANCE_ID);
+        this.EC2InstanceId = new AwsUtility().retrieveEC2InstanceId();
         try {
             buildProperties.load(BackplaneConfig.class.getResourceAsStream(BUILD_PROPERTIES));
         } catch (IOException e) {

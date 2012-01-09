@@ -16,6 +16,8 @@
 
 package com.janrain.servlet;
 
+import com.janrain.backplane.server.config.BackplaneConfig;
+
 import javax.servlet.*;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -40,8 +42,11 @@ public class ResponseHeaderFilter implements Filter {
 			response.addHeader(headerName, fc.getInitParameter(headerName));
 		}
 
-		// pass the request/response on
-		chain.doFilter(req, response);
+        //add EC2 instance id
+        response.addHeader("EC2-instance-id", BackplaneConfig.getEC2InstanceId());
+
+        // pass the request/response on
+        chain.doFilter(req, response);
 	}
 
 	@Override
